@@ -47,11 +47,17 @@ export class Game {
     this.currentSlot = 'slot1';
     this.loadingStep = null;
 
-    this.settings = { quality: 'high', sensitivity: 1.0, invertY: false, volMaster: 0.8, volSfx: 0.9, volMusic: 0.45, volAmbient: 0.5 };
+    this.settings = { quality: 'high', resolutionScale: 'auto', targetFps: 60, ao: true, grain: false,
+      sensitivity: 1.0, invertY: false, volMaster: 0.8, volSfx: 0.9, volMusic: 0.45, volAmbient: 0.5 };
     this.loadSettings();
     this.applySettings();
 
     this.input.onEscape = () => this.handleEscape();
+    // any key/click skips a running cinematic (boss intro)
+    const skipCin = () => { if (this.cameraRig.skipCinematic()) this.ui.setLetterbox(false); };
+    window.addEventListener('keydown', skipCin);
+    window.addEventListener('mousedown', skipCin);
+    this.cameraRig.onCinematicEnd = () => this.ui.setLetterbox(false);
     window.addEventListener('keydown', (e) => this.handlePanelKeys(e));
   }
 
@@ -247,6 +253,7 @@ export class Game {
   applySettings() {
     const s = this.settings;
     this.engine.setQuality(s.quality);
+    this.engine.setOptions({ resolutionScale: s.resolutionScale, targetFps: s.targetFps, ao: s.ao, grain: s.grain });
     this.cameraRig.sensitivity = 0.0022 * s.sensitivity;
     this.cameraRig.invertY = s.invertY;
     this.audio.volumes = { master: s.volMaster, sfx: s.volSfx, music: s.volMusic, ambient: s.volAmbient };

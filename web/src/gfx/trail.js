@@ -1,4 +1,5 @@
 // Ribbon weapon trail: samples blade base+tip each frame into a fading additive strip.
+// Ring-buffered (no per-frame allocations) for stable frame pacing at high FPS.
 import * as THREE from 'three';
 
 const N = 22;
@@ -27,7 +28,11 @@ export class Trail {
     this.mesh.visible = false;
     this.scene = scene;
     scene.add(this.mesh);
-    this.baseHist = [], this.tipHist = [];
+    // ring buffers of sampled blade endpoints (world space)
+    this.baseRing = new Float32Array(N * 3);
+    this.tipRing = new Float32Array(N * 3);
+    this.head = 0;      // next slot to write (newest)
+    this.count = 0;     // samples written, capped at N
     this._v1 = new THREE.Vector3(); this._v2 = new THREE.Vector3();
     this.strength = 0;
   }
@@ -38,20 +43,27 @@ export class Trail {
     if (!rig || !rig.trailBase) return;
     rig.trailBase.getWorldPosition(this._v1);
     rig.trailTip.getWorldPosition(this._v2);
-    this.baseHist.unshift(this._v1.clone());
-    this.tipHist.unshift(this._v2.clone());
-    if (this.baseHist.length > N) { this.baseHist.length = N; this.tipHist.length = N; }
+    const s = this.head * 3;
+    this.baseRing[s] = this._v1.x; this.baseRing[s + 1] = this._v1.y; this.baseRing[s + 2] = this._v1.z;
+    this.tipRing[s] = this._v2.x; this.tipRing[s + 1] = this._v2.y; this.tipRing[s + 2] = this._v2.z;
+    this.head = (this.head + 1) % N;
+    this.count = Math.min(this.count + 1, N);
     this.strength = active ? Math.min(1, this.strength + dt * 12) : Math.max(0, this.strength - dt * 5);
     if (this.strength <= 0.01) { this.mesh.visible = false; return; }
     this.mesh.visible = true;
     const pa = this.posAttr.array, ca = this.colAttr.array;
-    const len = this.baseHist.length;
     for (let i = 0; i < N; i++) {
-      const j = Math.min(i, len - 1);
-      const b = this.baseHist[j], t = this.tipHist[j];
-      pa[i * 6] = b.x; pa[i * 6 + 1] = b.y; pa[i * 6 + 2] = b.z;
-      pa[i * 6 + 3] = t.x; pa[i * 6 + 4] = t.y; pa[i * 6 + 5] = t.z;
-      const f = Math.pow(1 - i / (N - 1), 1.8) * this.strength;
+      // newest sample first: index 0 = the sample written most recently
+      const slot = (this.head - 1 - i + N * 2) % N;
+      const valid = i < this.count;
+      const o = slot * 3;
+      pa[i * 6] = valid ? this.baseRing[o] : this._v1.x;
+      pa[i * 6 + 1] = valid ? this.baseRing[o + 1] : this._v1.y;
+      pa[i * 6 + 2] = valid ? this.baseRing[o + 2] : this._v1.z;
+      pa[i * 6 + 3] = valid ? this.tipRing[o] : this._v2.x;
+      pa[i * 6 + 4] = valid ? this.tipRing[o + 1] : this._v2.y;
+      pa[i * 6 + 5] = valid ? this.tipRing[o + 2] : this._v2.z;
+      const f = valid ? Math.pow(1 - i / (N - 1), 1.8) * this.strength : 0;
       const r = this.color.r * f, g = this.color.g * f, bl = this.color.b * f;
       ca[i * 6] = r; ca[i * 6 + 1] = g; ca[i * 6 + 2] = bl;
       ca[i * 6 + 3] = r; ca[i * 6 + 4] = g; ca[i * 6 + 5] = bl;

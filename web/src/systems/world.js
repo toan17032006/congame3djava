@@ -6,6 +6,7 @@ import { makeTree, makeBambooField, makeRock, makeLantern, makeHouse, makeTorii,
   makeShrineHall, makeGrave, makeStatue, makeWallSegment, makeKeepTower, makeCastleGate, makeCampfire,
   makeMountain } from '../gfx/props.js';
 import { buildGrass } from '../gfx/grass.js';
+import { mergeStaticProps } from '../gfx/merge.js';
 import { WIND, disposeSwayMaterials } from '../gfx/wind.js';
 import { Interactable } from '../entities/interactable.js';
 
@@ -64,17 +65,21 @@ export class World {
       return h;
     };
 
-    const ter = buildTerrain(this, def, game.engine.quality);
+    const qk = game.engine.qualityKey;
+    const ter = buildTerrain(this, def, qk);
     this.group.add(ter.mesh);
     this.owned.push(ter);
+    this.terrain = ter; // material tweakable at runtime (e.g. wet ground in rain)
     this.regionGroup = new THREE.Group();
     this.group.add(this.regionGroup);
 
     this.buildProps(def, rng, noise);
     this.buildLandmarks(def, rng);
     this.buildBackdrop(def, rng);
-    this.grass = buildGrass(this, def, rng, noise, game.engine.quality);
+    this.grass = buildGrass(this, def, rng, noise, qk);
     if (this.grass) this.regionGroup.add(this.grass.mesh);
+    // cut draw calls: batch static props per material per map chunk (sway meshes keep their draws)
+    for (const m of mergeStaticProps(this.regionGroup, Math.max(24, size / 5))) this.owned.push({ mesh: m, geo: m.geometry });
     return true;
   }
 

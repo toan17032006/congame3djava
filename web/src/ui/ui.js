@@ -22,6 +22,8 @@ export class UIManager {
     this.screens = {};
     this.toasts = el('div', 'toasts');
     this.root.appendChild(this.toasts);
+    this.letterbox = el('div', 'letterbox');
+    this.root.appendChild(this.letterbox);
     this.buildScreens();
     this._fpsAcc = 0;
   }
@@ -202,6 +204,8 @@ export class UIManager {
 
   inputFocusHack() { /* pointer lock requested by game.enterLevel */ }
 
+  setLetterbox(on) { this.letterbox.classList.toggle('on', !!on); }
+
   showPause() {
     this.screens.pause.style.display = 'flex';
     const sub = this.screens.pause.querySelector('#pause-sub');
@@ -252,8 +256,18 @@ export class UIManager {
         <h3>Cài đặt</h3>
         <label>Chất lượng đồ họa
           <select id="set-quality">
-            <option value="low">Thấp</option><option value="medium">Trung bình</option><option value="high">Cao</option><option value="ultra">Cực cao (Ultra)</option>
+            <option value="low">Thấp</option><option value="medium">Trung bình</option><option value="high">Cao</option><option value="ultra">Cực cao (Ultra)</option><option value="cinematic">Điện ảnh (4K)</option>
           </select></label>
+        <label>Độ phân giải render
+          <select id="set-res">
+            <option value="auto">Tự động thích ứng</option><option value="1">100% (native)</option><option value="0.8">80%</option><option value="0.65">65%</option><option value="0.5">50%</option>
+          </select></label>
+        <label>FPS mục tiêu (tự động)
+          <select id="set-fps">
+            <option value="60">60</option><option value="120">120</option><option value="144">144</option><option value="240">240</option>
+          </select></label>
+        <label><input id="set-ao" type="checkbox"> Ambient Occlusion (GTAO)</label>
+        <label><input id="set-grain" type="checkbox"> Film grain</label>
         <label>Độ nhạy chuột <input id="set-sens" type="range" min="0.4" max="2" step="0.1"></label>
         <label><input id="set-invert" type="checkbox"> Đảo trục Y</label>
         <label>Âm lượng tổng <input id="set-vm" type="range" min="0" max="1" step="0.05"></label>
@@ -264,6 +278,10 @@ export class UIManager {
       </div>`;
     const q = host.querySelector('#set-quality');
     q.value = s.quality;
+    host.querySelector('#set-res').value = String(s.resolutionScale);
+    host.querySelector('#set-fps').value = String(s.targetFps || 60);
+    host.querySelector('#set-ao').checked = s.ao !== false;
+    host.querySelector('#set-grain').checked = !!s.grain;
     host.querySelector('#set-sens').value = s.sensitivity;
     host.querySelector('#set-invert').checked = s.invertY;
     host.querySelector('#set-vm').value = s.volMaster;
@@ -271,7 +289,12 @@ export class UIManager {
     host.querySelector('#set-vu').value = s.volMusic;
     host.querySelector('#set-va').value = s.volAmbient;
     const apply = () => {
-      s.quality = q.value; s.sensitivity = parseFloat(host.querySelector('#set-sens').value);
+      s.quality = q.value;
+      s.resolutionScale = host.querySelector('#set-res').value;
+      s.targetFps = parseInt(host.querySelector('#set-fps').value, 10) || 60;
+      s.ao = host.querySelector('#set-ao').checked;
+      s.grain = host.querySelector('#set-grain').checked;
+      s.sensitivity = parseFloat(host.querySelector('#set-sens').value);
       s.invertY = host.querySelector('#set-invert').checked;
       s.volMaster = parseFloat(host.querySelector('#set-vm').value);
       s.volSfx = parseFloat(host.querySelector('#set-vs').value);

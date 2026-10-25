@@ -16,6 +16,9 @@ export class CameraRig {
     this.baseFov = 66;
     this._kick = 0;
     this._firstPersonWeapon = null; // optional overlay rig
+    this.cinematic = null;         // {t, dur, from, to, boss} — boss intro dolly
+    this._cinPivot = null;
+    this.onCinematicEnd = null;
   }
 
   setLockTarget(t) { this.lockTarget = t; }
@@ -23,11 +26,36 @@ export class CameraRig {
     this.mode = this.mode === 'third' ? 'first' : 'third';
     return this.mode;
   }
+
+  // short skippable boss-intro dolly: side sweep → normal follow
+  playBossIntro(boss, player) {
+    if (!boss || !player) return false;
+    this.mode = 'third';
+    this.yaw = Math.atan2(player.pos.x - boss.pos.x, player.pos.z - boss.pos.z) + 0.95;
+    this.pitch = 0.04;
+    this.dist = 9.5;
+    this.cinematic = { t: 0, dur: 2.8, boss,
+      from: { yaw: this.yaw, pitch: 0.04, dist: 9.5 },
+      to: { yaw: 0, pitch: 0.3, dist: 5.4 } };
+    return true;
+  }
+
+  skipCinematic() {
+    if (!this.cinematic) return false;
+    this.yaw = this.cinematic.to.yaw;
+    this.pitch = this.cinematic.to.pitch;
+    this.dist = this.cinematic.to.dist;
+    this.cinematic = null;
+    this._cinPivot = null;
+    if (this.onCinematicEnd) this.onCinematicEnd();
+    return true;
+  }
   shake(amount) { this.trauma = clamp(this.trauma + amount, 0, 1); }
   fovKick(amount) { this._kick = Math.min(this._kick + amount, 10); }
 
   _applyMouse(dt) {
     const m = this.input.consumeMouse();
+    if (this.cinematic) return; // mouse ignored while the intro dolly plays
     if (this.input.pointerLocked) {
       this.yaw -= m.dx * this.sensitivity;
       this.pitch += (this.invertY ? 1 : -1) * m.dy * this.sensitivity;
@@ -38,6 +66,24 @@ export class CameraRig {
 
   update(dt, targetPos, world, sprinting) {
     this._applyMouse(dt);
+    this._cinPivot = null;
+
+    // boss intro dolly
+    if (this.cinematic) {
+      const c = this.cinematic;
+      c.t += dt;
+      const f = Math.min(c.t / c.dur, 1);
+      const e = f * f * (3 - 2 * f);
+      this.yaw = c.from.yaw + (c.to.yaw - c.from.yaw) * e;
+      this.pitch = c.from.pitch + (c.to.pitch - c.from.pitch) * e;
+      this.dist = c.from.dist + (c.to.dist - c.from.dist) * e;
+      // pivot biased toward the boss, relaxing toward the player as it ends
+      this._cinPivot = {
+        x: targetPos.x + (c.boss.pos.x - targetPos.x) * 0.5 * (1 - e),
+        z: targetPos.z + (c.boss.pos.z - targetPos.z) * 0.5 * (1 - e),
+      };
+      if (f >= 1) { this.cinematic = null; if (this.onCinematicEnd) this.onCinematicEnd(); }
+    }
 
     // lock-on framing
     if (this.lockTarget && !this.lockTarget.dead) {
@@ -71,7 +117,8 @@ export class CameraRig {
     let dist = this.dist;
     // pivot shifts toward lock target to frame both
     let px = targetPos.x, pz = targetPos.z;
-    if (this.lockTarget && !this.lockTarget.dead) {
+    if (this._cinPivot) { px = this._cinPivot.x; pz = this._cinPivot.z; }
+    else if (this.lockTarget && !this.lockTarget.dead) {
       px = targetPos.x + (this.lockTarget.pos.x - targetPos.x) * 0.22;
       pz = targetPos.z + (this.lockTarget.pos.z - targetPos.z) * 0.22;
     }

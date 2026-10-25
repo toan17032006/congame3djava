@@ -73,6 +73,10 @@ function makeNormalTexture() {
 
 let _detailTex = null, _normalTex = null;
 
+function anisotropyFor(world) {
+  try { return Math.min(8, world.game.engine.renderer.capabilities.getMaxAnisotropy()); } catch { return 4; }
+}
+
 export function buildTerrain(world, def, quality = 'high') {
   const size = def.size;
   const seg = quality === 'ultra' ? 160 : quality === 'low' ? 96 : 128;
@@ -81,6 +85,9 @@ export function buildTerrain(world, def, quality = 'high') {
 
   if (!_detailTex) _detailTex = makeDetailTexture();
   if (!_normalTex) _normalTex = makeNormalTexture();
+  const aniso = anisotropyFor(world);
+  _detailTex.anisotropy = aniso;
+  _normalTex.anisotropy = aniso;
 
   const pos = geo.attributes.position;
   const uv = geo.attributes.uv;

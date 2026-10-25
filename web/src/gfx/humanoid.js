@@ -123,19 +123,22 @@ export function buildHumanoid(opts = {}) {
   browL.rotation.z = 0.12;
   const browR = mesh(head, G('box', 0.05, 0.014, 0.01), mats.hair, 0.05, 0.155, 0.096);
   browR.rotation.z = -0.12;
-  // hair: cap + back volume + sideburns
+  // hair: cap (tight) + sway group (back volume, topknot) for secondary motion
   const hairCap = mesh(head, G('sph', 0.122, 12, 9), mats.hair, 0, 0.135, -0.008);
   hairCap.scale.set(0.97, 0.95, 1.0);
-  const hairBack = mesh(head, G('box', 0.16, 0.16, 0.06), mats.hair, 0, 0.1, -0.088);
-  const hairTop = mesh(head, G('sph', 0.06, 8, 6), mats.hair, 0, 0.235, -0.01);
   const sideL = mesh(head, G('box', 0.025, 0.1, 0.05), mats.hair, -0.1, 0.075, 0.02);
   const sideR = mesh(head, G('box', 0.025, 0.1, 0.05), mats.hair, 0.1, 0.075, 0.02);
+  const hairSway = new THREE.Group();
+  hairSway.position.set(0, 0.1, -0.03);
+  head.add(hairSway);
+  const hairBack = mesh(hairSway, G('box', 0.16, 0.16, 0.06), mats.hair, 0, 0.02, -0.06);
+  const hairTop = mesh(hairSway, G('sph', 0.06, 8, 6), mats.hair, 0, 0.14, 0.01);
   // samurai topknot (chonmage) unless opts.topknot === false
-  const topknotTie = mesh(head, G('cyl', 0.02, 0.02, 0.1, 6), mats.accent, 0, 0.25, -0.045);
+  const topknotTie = mesh(hairSway, G('cyl', 0.02, 0.02, 0.1, 6), mats.accent, 0, 0.15, -0.02);
   topknotTie.rotation.x = 0.5;
-  const topknot = mesh(head, G('sph', 0.045, 8, 6), mats.hair, 0, 0.28, -0.075);
+  const topknot = mesh(hairSway, G('sph', 0.045, 8, 6), mats.hair, 0, 0.185, -0.05);
   topknot.scale.set(1, 0.7, 1.5);
-  if (opts.topknot === false) { topknot.visible = false; topknotTie.visible = false; }
+  if (opts.topknot === false) { topknot.visible = false; topknotTie.visible = false; hairBack.visible = false; hairTop.visible = false; }
 
   // ================= arms =================
   function buildArm(side) {
@@ -202,6 +205,7 @@ export function buildHumanoid(opts = {}) {
     trailTip.position.set(0, 0, 0);
     saya.children.length = 0;
     if (!model) { weaponAnchor.add(weaponGroup); return; }
+    weaponGroup.userData.style = model.style;
     const metal = new THREE.MeshPhysicalMaterial({ color: model.color, metalness: 0.95, roughness: 0.18, envMapIntensity: 1.6, clearcoat: 0.6, clearcoatRoughness: 0.2 });
     const edgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const hamonMat = new THREE.MeshStandardMaterial({ color: 0xdfe8f2, metalness: 0.7, roughness: 0.3, emissive: 0x2a3038, emissiveIntensity: 0.2 });
@@ -355,7 +359,9 @@ export function buildHumanoid(opts = {}) {
   }
 
   return {
-    group, body, joints, weaponAnchor, trailBase, trailTip, mats, extra, saya,
+    group, body, joints, weaponAnchor, trailBase, trailTip, mats, extra, saya, hairSway,
+    sayaBase: [0.12, 0, -0.5],
+    hasWeapon() { return (weaponGroup && weaponGroup.userData.style) || null; },
     height: 1.72 * (opts.scale || 1),
     setWeapon, setArmor, setHelmet,
     setVisible(v) { group.visible = v; },

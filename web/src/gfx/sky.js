@@ -119,6 +119,7 @@ export class Sky {
     this.sun.shadow.radius = 4;
     scene.add(this.sun);
     scene.add(this.sun.target);
+    this.sunDir = new THREE.Vector3(0.5, 0.7, 0.5).normalize(); // before set() runs (menu state)
   }
 
   set(def) {

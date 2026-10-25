@@ -171,3 +171,15 @@ h1, h2, h3, h4 { font-family: Georgia, 'Times New Roman', serif; letter-spacing:
 ::-webkit-scrollbar { width: 9px; }
 ::-webkit-scrollbar-track { background: #14120e; }
 ::-webkit-scrollbar-thumb { background: #3a352c; }
+
+/* cinematic letterbox for boss intros */
+.letterbox { position: absolute; inset: 0; pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.45s ease; }
+.letterbox.on { opacity: 1; }
+.letterbox::before, .letterbox::after { content: ''; position: absolute; left: 0; right: 0; height: 9vh; background: #000; box-shadow: 0 0 18px rgba(0,0,0,0.7); }
+.letterbox::before { top: 0; }
+.letterbox::after { bottom: 0; }
+
+/* boss phase pips */
+.boss-pips { display: none; gap: 6px; justify-content: center; margin-top: 4px; }
+.boss-pips .pip { width: 10px; height: 10px; transform: rotate(45deg); border: 1px solid rgba(255, 210, 87, 0.55); background: rgba(0, 0, 0, 0.4); transition: background 0.3s; }
+.boss-pips .pip.lit { background: #ffd257; box-shadow: 0 0 6px rgba(255, 210, 87, 0.8); }

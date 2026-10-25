@@ -25,6 +25,7 @@ export class HUD {
       <div class="boss-bar" id="hud-boss" style="display:none">
         <div class="boss-name" id="hud-bossname"></div>
         <div class="boss-hp"><div class="boss-hpfill" id="hud-bosshp"></div></div>
+        <div class="boss-pips" id="hud-bosspips"></div>
       </div>
       <div class="hud-bl">
         <div class="hp-wrap">
@@ -67,6 +68,10 @@ export class HUD {
     if (!boss) { bar.style.display = 'none'; return; }
     bar.style.display = 'block';
     this.root.querySelector('#hud-bossname').textContent = boss.name;
+    const phases = (boss.bossDef && boss.bossDef.phases) || [];
+    const pips = this.root.querySelector('#hud-bosspips');
+    pips.innerHTML = phases.slice(1).map((_, i) => `<span class="pip${i + 1 <= (boss.phaseIdx || 0) ? ' lit' : ''}"></span>`).join('');
+    pips.style.display = phases.length > 1 ? 'flex' : 'none';
   }
 
   setPrompt(text) {
@@ -125,14 +130,23 @@ export class HUD {
     // boss bar
     if (this.boss) {
       if (this.boss.combat.dead || this.boss.disposed) this.setBoss(null);
-      else this.root.querySelector('#hud-bosshp').style.width = `${Math.max(0, (this.boss.hp / this.boss.maxHp)) * 100}%`;
+      else {
+        this.root.querySelector('#hud-bosshp').style.width = `${Math.max(0, (this.boss.hp / this.boss.maxHp)) * 100}%`;
+        const pips = this.root.querySelector('#hud-bosspips');
+        if (pips.style.display !== 'none' && pips.children.length) {
+          const lit = this.boss.phaseIdx || 0;
+          [...pips.children].forEach((el, i) => el.classList.toggle('lit', i + 1 <= lit));
+        }
+      }
     }
     // fps
     this._fpsT += dt;
     if (this._fpsT > 0.5) {
       this._fpsT = 0;
-      const qNames = { ultra: 'Ultra', high: 'Cao', medium: 'TB', low: 'Thấp' };
-      this.root.querySelector('#hud-fps').textContent = `${g.engine.stats.fps} FPS · ${g.engine.stats.frameMs.toFixed(1)}ms · ${qNames[g.engine.quality] || ''}`;
+      const qNames = { cinematic: '4K', ultra: 'Ultra', high: 'Cao', medium: 'TB', low: 'Thấp' };
+      const st = g.engine.stats;
+      const rs = g.engine.options.resolutionScale === 'auto' ? `auto ${Math.round(st.renderScale * 100)}%` : `${Math.round(st.renderScale * 100)}%`;
+      this.root.querySelector('#hud-fps').textContent = `${st.fps} FPS · ${st.frameMs.toFixed(1)}ms · ${qNames[g.engine.quality] || ''} · ${rs} · ${st.drawCalls} DC`;
     }
   }
 }

@@ -64,6 +64,13 @@ export class LevelManager {
       g.engine.scene.fog.density = region.sky.fogDensity * 1.6;
     }
     g.engine.scene.fog.color.setHex(region.sky.bottom);
+    // wet ground in rain: glossier, more reflective terrain
+    const tm = g.world.terrain?.mat;
+    if (tm) {
+      const wet = region.weather === 'rain';
+      tm.roughness = wet ? 0.55 : 0.96;
+      tm.envMapIntensity = wet ? 0.9 : 0.25;
+    }
 
     // player placement
     const [sx, sz] = g.world.spawnPoint;
@@ -109,6 +116,13 @@ export class LevelManager {
       g.currentBoss = boss;
       g.ui.hud.setBoss(boss);
       g.ui.notify('boss', BOSSES[def.boss].intro || '');
+      // one cinematic intro per boss per session (skippable, player protected during it)
+      if (!this._bossIntroSeen) this._bossIntroSeen = {};
+      if (!this._bossIntroSeen[def.boss]) {
+        this._bossIntroSeen[def.boss] = true;
+        g.player.combat.iframes = 3.2;
+        if (g.cameraRig.playBossIntro(boss, g.player)) g.ui.setLetterbox(true);
+      }
     }
     // resource nodes
     g.world.spawnResourceNodes(def.resourceNodes);

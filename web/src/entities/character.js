@@ -8,6 +8,39 @@ import { angleWrap, clamp } from '../core/utils.js';
 import { Trail } from '../gfx/trail.js';
 
 const GRAVITY = -18;
+const SWAY_STIFF = 85, SWAY_DAMP = 10.5, SWAY_MAX = 0.45;
+
+// Katana stance overlay (blended on top of idle/walk/run clips while out of combat).
+// Values are rotation targets per joint; null = leave the clip pose untouched.
+// Tuned live in-browser; exposed on window as __stance for future adjustments.
+// Combat clips are never modified — the stance fades out during attacks/blocks/hit reactions.
+const WEAPON_STANCE = {
+  idle: {
+    armR_sh: [-0.24, -0.08, -0.22], armR_el: [-0.5, 0, 0], armR_hand: [0.35, 0, 0.06],
+    armL_sh: [-0.05, 0.1, 0.3], armL_el: [-0.35, 0, 0],
+    torso: [null, 0.1, null], hips: [null, -0.06, null],
+  },
+  move: {
+    armR_sh: [-0.4, -0.05, -0.3], armR_el: [-0.7, 0, 0], armR_hand: [0.22, 0, -0.05],
+    moveBlend: 0.72, // hold the blade steadier than the walk/run swing would
+  },
+};
+if (typeof window !== 'undefined') window.__stance = WEAPON_STANCE; // live-tuning hook
+
+// secondary motion: hair bun & scabbard lag behind acceleration via damped springs
+class SwayState {
+  constructor() { this.pitch = 0; this.pitchV = 0; this.roll = 0; this.rollV = 0; }
+  reset() { this.pitch = this.pitchV = this.roll = this.rollV = 0; }
+  step(targetPitch, targetRoll, dt) {
+    const h = Math.min(dt, 1 / 30);
+    this.pitchV += ((targetPitch - this.pitch) * SWAY_STIFF - this.pitchV * SWAY_DAMP) * h;
+    this.pitch += this.pitchV * h;
+    this.rollV += ((targetRoll - this.roll) * SWAY_STIFF - this.rollV * SWAY_DAMP) * h;
+    this.roll += this.rollV * h;
+    this.pitch = clamp(this.pitch, -SWAY_MAX, SWAY_MAX);
+    this.roll = clamp(this.roll, -SWAY_MAX, SWAY_MAX);
+  }
+}
 
 export class Character extends Entity {
   constructor(game, cfg) {
@@ -45,6 +78,8 @@ export class Character extends Entity {
     this.grounded = true;
     this.airTime = 0;
     this.lastStrikeId = 0;
+    this._sway = new SwayState();
+    this._prevVel = new THREE.Vector3();
     // weapon trail only for the hero and bosses (perf)
     this._trail = null;
     if (this.isPlayer || cfg.isBoss) {
@@ -86,11 +121,63 @@ export class Character extends Entity {
     }
   }
 
+  // katana/nodachi stance: blends the sword arm(s) toward a low guard while idle/locomoting
+  _weaponStance(dt) {
+    const style = this.rig.hasWeapon ? this.rig.hasWeapon() : null;
+    const eligible = style === 'katana' || style === 'nodachi';
+    const c = this.combat;
+    const busy = !!c.attack || c.blocking || c.staggered > 0 || c.parried > 0 || c.dead;
+    const clip = this.anim.name;
+    const moving = clip === 'walk' || clip === 'run' || clip === 'sprint';
+    const inStance = eligible && !busy && (clip === 'idle' || moving);
+    if (!this._stanceW) this._stanceW = 0;
+    this._stanceW += ((inStance ? 1 : 0) - this._stanceW) * Math.min(1, dt * 7);
+    if (this._stanceW < 0.003 || dt <= 0) return;
+    const w = this._stanceW;
+    const set = moving ? WEAPON_STANCE.move : WEAPON_STANCE.idle;
+    const k = (moving ? set.moveBlend : 1) * w;
+    const J = this.rig.joints;
+    for (const name of ['armR_sh', 'armR_el', 'armR_hand', 'armL_sh', 'armL_el', 'torso', 'hips']) {
+      const target = set[name];
+      if (!target) continue;
+      const j = J[name];
+      if (!j) continue;
+      if (target[0] !== null && target[0] !== undefined) j.rotation.x += (target[0] - j.rotation.x) * k;
+      if (target[1] !== null && target[1] !== undefined) j.rotation.y += (target[1] - j.rotation.y) * k;
+      if (target[2] !== null && target[2] !== undefined) j.rotation.z += (target[2] - j.rotation.z) * k;
+    }
+  }
+
   _updateTrail(dt) {
     if (!this._trail) return;
     const atk = this.combat.attack;
     const active = !!atk && atk.t / atk.def.dur > 0.12 && atk.t / atk.def.dur < 0.85;
     this._trail.update(active, this.rig, dt);
+  }
+
+  // hair bun + saya react to acceleration and steady speed (secondary motion)
+  _updateSway(dt) {
+    const rig = this.rig;
+    if (!rig.hairSway || this.combat.dead || dt <= 0) return;
+    const ax = (this.vel.x - this._prevVel.x) / dt;
+    const az = (this.vel.z - this._prevVel.z) / dt;
+    this._prevVel.copy(this.vel);
+    const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
+    const fwdAcc = ax * sy + az * cy;          // along facing direction
+    const sideAcc = ax * cy - az * sy;         // along right direction
+    const fwdSpeed = this.vel.x * sy + this.vel.z * cy;
+    // accelerating forward → hair swings back; sprinting → it trails; side steps → roll
+    const k = 1 / Math.max(this.scale, 0.001) * 0.004;
+    const targetPitch = clamp(-fwdAcc * k - Math.max(fwdSpeed, 0) * 0.055, -SWAY_MAX, SWAY_MAX);
+    const targetRoll = clamp(sideAcc * k, -SWAY_MAX, SWAY_MAX);
+    this._sway.step(targetPitch, targetRoll, dt);
+    const s = this._sway;
+    rig.hairSway.rotation.x = s.pitch;
+    rig.hairSway.rotation.z = s.roll;
+    if (rig.saya) {
+      rig.saya.rotation.x = rig.sayaBase[0] + s.pitch * 0.55;
+      rig.saya.rotation.z = rig.sayaBase[2] + s.roll * 0.45;
+    }
   }
 
   get maxHp() { return this.stats.maxHp; }
@@ -349,6 +436,8 @@ export class Character extends Entity {
     this.stamina = this.maxStamina;
     this.pos.set(x, game.world.groundAt(x, z), z);
     this.vel.set(0, 0, 0);
+    this._sway.reset();
+    this._prevVel.set(0, 0, 0);
     this.anim.play('idle', { restart: true });
   }
 
@@ -384,6 +473,8 @@ export class Character extends Entity {
     }
     this.anim.update(dt);
     this._animOverlay(dt);
+    this._weaponStance(dt);
+    this._updateSway(dt);
     this._updateTrail(dt);
     this.syncRig();
   }

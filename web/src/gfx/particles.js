@@ -1,6 +1,13 @@
 // GPU particle pool (additive points) + weather systems.
 import * as THREE from 'three';
 
+const _spawnColors = new Map(); // hex -> THREE.Color cache (avoids per-particle allocation)
+function cachedColor(hex) {
+  let c = _spawnColors.get(hex);
+  if (!c) { c = new THREE.Color(hex); _spawnColors.set(hex, c); }
+  return c;
+}
+
 export class ParticleSystem {
   constructor(scene, max = 900) {
     this.max = max;
@@ -40,7 +47,7 @@ export class ParticleSystem {
       vx = vx / l * speed; vy = vy / l * speed; vz = vz / l * speed;
       if (dir) { vx = vx * 0.4 + dir.x * speed; vy = vy * 0.4 + dir.y * speed; vz = vz * 0.4 + dir.z * speed; }
       this.vel[i * 3] = vx; this.vel[i * 3 + 1] = vy; this.vel[i * 3 + 2] = vz;
-      const c = new THREE.Color(colors[(Math.random() * colors.length) | 0]);
+      const c = cachedColor(colors[(Math.random() * colors.length) | 0]);
       this.baseCol[i * 3] = c.r; this.baseCol[i * 3 + 1] = c.g; this.baseCol[i * 3 + 2] = c.b;
       this.col[i * 3] = c.r; this.col[i * 3 + 1] = c.g; this.col[i * 3 + 2] = c.b;
       this.life[i] = this.maxLife[i] = opts.life || (0.4 + Math.random() * 0.4);

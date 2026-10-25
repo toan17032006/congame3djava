@@ -177,7 +177,8 @@ export class Player extends Character {
     this.moving = axis.len > 0;
 
     if (this.state === 'dodge') {
-      if (this.anim.name !== 'dodge') this.state = 'move';
+      // the roll clip is a non-loop oneshot: exit when it finishes (else the player slides forever)
+      if (this.anim.name !== 'dodge' || this.anim.timeNorm >= 1) this.state = 'move';
     } else if (this.state === 'attack' || this.state === 'skill') {
       const atk = this.combat.attack;
       if (!atk) {
@@ -230,7 +231,10 @@ export class Player extends Character {
         if (this.combat.blocking) { /* block clip holds */ }
         else if (sprint) { if (this.anim.name !== 'sprint') this.anim.play('sprint'); this.moveMode = 'sprint'; }
         else if (this.moving) { if (this.anim.name !== 'run' && this.anim.name !== 'walk') this.anim.play('run'); this.moveMode = 'run'; }
-        else if (this.anim.name !== 'idle' && !this.anim.current.clip.loop) { /* oneshot playing */ }
+        else if (this.anim.name !== 'idle' && !this.anim.current.clip.loop) {
+          // oneshot (attack/dodge/interact) finished while standing still → back to idle
+          if (this.anim.timeNorm >= 1) this.anim.play('idle');
+        }
         else if (this.anim.name !== 'idle') this.anim.play('idle');
         if (!this.moving && this.anim.name === 'run') this.anim.play('idle');
         if (!this.moving && this.anim.name === 'sprint') this.anim.play('idle');
