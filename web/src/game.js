@@ -16,6 +16,7 @@ import { Vfx } from './gfx/vfx.js';
 import { AudioMgr } from './gfx/audio.js';
 import { Player } from './entities/player.js';
 import { Npc } from './entities/npc.js';
+import { SettingsStore } from './framework/patterns/settings.js';
 import { LEVEL_MAP, LEVELS } from './data/levels.js';
 
 const SETTINGS_KEY = 'samurai_settings_v1';
@@ -47,9 +48,13 @@ export class Game {
     this.currentSlot = 'slot1';
     this.loadingStep = null;
 
-    this.settings = { quality: 'high', resolutionScale: 'auto', targetFps: 60, ao: true, grain: false,
-      sensitivity: 1.0, invertY: false, volMaster: 0.8, volSfx: 0.9, volMusic: 0.45, volAmbient: 0.5 };
-    this.loadSettings();
+    // settings qua framework SettingsStore: mặc định + merge + persist + callback
+    this.settingsStore = new SettingsStore({
+      defaults: { quality: 'high', resolutionScale: 'auto', targetFps: 60, ao: true, grain: false,
+        sensitivity: 1.0, invertY: false, volMaster: 0.8, volSfx: 0.9, volMusic: 0.45, volAmbient: 0.5 },
+      storageKey: SETTINGS_KEY,
+      onChanged: () => this.applySettings(),
+    });
     this.applySettings();
 
     this.input.onEscape = () => this.handleEscape();
@@ -238,17 +243,12 @@ export class Game {
     this.ui.showMenu();
   }
 
-  // ---- settings -----------------------------------------------------------
-  loadSettings() {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) this.settings = { ...this.settings, ...JSON.parse(raw) };
-    } catch { /* corrupt settings: keep defaults */ }
-  }
+  get settings() { return this.settingsStore.all; }
 
-  saveSettings() {
-    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch {}
-  }
+  // ---- settings -----------------------------------------------------------
+  loadSettings() { /* SettingsStore tự load/merge khi khởi tạo */ }
+
+  saveSettings() { this.settingsStore.persist(); }
 
   applySettings() {
     const s = this.settings;

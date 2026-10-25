@@ -101,3 +101,45 @@ kiểm thử trong trình duyệt thật (`window.__errors` = 0 xuyên suốt). 
 | 4 | **BUG CŨ (nặng): kẹt trong tư thế chém khi đứng yên sau đòn đánh** | **Đã sửa — Đạt** | `player.js` nhánh locomotion bỏ qua clip one-shot đã chạy xong → nhân vật đứng đóng băng ở frame cuối `light1/light2/...`; vá: `timeNorm >= 1 → play('idle')`. Đo: đánh xong 1.3s → `clip: idle`, 0 lỗi |
 | 5 | **BUG CŨ (nặng): né xong trượt vô_controls vô hạn** | **Đã sửa — Đạt** | State `dodge` chỉ thoát khi tên clip đổi (không bao giờ) → vel 11 không giảm, trượt ~15m/1.5s (đo thật trước khi vá: pos (0,40)→(-15.4,46.8), vel -10.1); vá: thoát dodge khi `timeNorm >= 1`. Đo sau vá: vel (0,0), `clip: idle`, `stanceW: 1` |
 | 6 | Không hồi quy gameplay | **Đạt** | Combo/parry/né dùng lại đúng clip & timing cũ; `window.__errors` = 0 suốt phiên kiểm; build production 549ms OK |
+
+---
+
+# Đợt refactor #4 — Tách framework library (2026-10-25)
+
+Mục tiêu: tách các mẫu lặp (Object/Component/Function/Decorator/Interface/Abstract/Class) thành
+thư viện framework hoàn chỉnh ở `web/src/framework/` — công việc mới chỉ còn **import → điền
+thông số → hiệu chỉnh**. Phục vụ mở rộng/nâng cấp/thiết kế/bảo trì.
+
+| # | Tiêu chí | Trạng thái | Bằng chứng |
+|---|---|---|---|
+| 1 | Thư viện hoàn chỉnh đủ các nhóm yêu cầu | **Đạt** | 12 module: `EventBus`, `StateMachine`, `BaseEntity`+`BaseComponent` (Object/Component), `Registry`, `Service`+`ServiceContainer`, `ObjectPool`, `Ticker`, `mixin`+`abstractClass`+`implementsContract`+`before/after/around` (Decorator/Interface/Abstract), `ResourceCache`, `SettingsStore`, `createSerializable`, `math` — kèm barrel `index.js` |
+| 2 | Không phụ thuộc three.js/DOM (tái sử dụng riêng) | **Đạt** | Toàn bộ `framework/` chỉ JS thuần; test headless bằng node --test chạy qua được chứng minh không cần browser |
+| 3 | Test tự động cho framework | **Đạt** | `tests/framework/` — 11 file, **37/37 pass** (`npm test`, node v24); phủ: events, fsm, entity/component, registry, container, pool, ticker (dt clamp/hitstop/fps), decorate, cache, settings persist, serialize whitelist, math |
+| 4 | Game tiêu thụ framework (import → điền thông số) | **Đạt** | 6 điểm tích hợp thật: `core/utils.js` re-export `framework/math`; `entities/entity.js` extends `BaseEntity` (Vector3 inject qua factory) + component system sẵn cho entity mới; `gfx/materials.js` G()/M() chạy trên `ResourceCache`; `core/engine.js` chạy loop qua `Ticker` (hitstop/timeScale/FPS giữ nguyên API); `game.js` settings qua `SettingsStore` (persist + onChanged); 4 data module (`enemies/items/skills/bosses`) đăng ký vào `Registry`, tra cứu chuyển sang `registry.get(id)` |
+| 5 | Không hồi quy gameplay | **Đạt** | Build production OK; kiểm trình duyệt thật: boot → chơi mới → di chuyển → đánh (về idle, stance hồi) → L05 boss spawn qua registry (Kurogane + pips pha) → settings persist qua reload (grain true/false) — `window.__errors` = 0 suốt phiên |
+| 6 | Tài liệu "lấy ra dùng" | **Đạt** | `web/src/framework/README.md`: bảng module + 8 công thức (entity+component, FSM AI, registry data-driven, abstract/interface/decorator, mixin trait, service container, pool/cache/settings/serialize, ticker) + nguyên tắc bảo trì |
+| 7 | Phát hiện khi tích hợp | **Ghi nhận** | Item defs trong `data/items.js` không có field `id` (khóa nằm ở map key) → chuẩn hóa `def.id = def.id ?? mapKey` khi đăng ký Registry; test bắt ngay nhờ Registry validate |
+| 8 | Giới hạn | **Minh bạch** | Npc/Boss FSM nội bộ chưa chuyển sang `StateMachine` (giữ nguyên để không mạo hiểm hành vi AI đã nghiệm thu) — framework đã sẵn công cụ + công thức, migration là việc kế tiếp; container quản lý vòng đời game.js chưa áp (các system hiện có chữ ký update khác nhau) |
+
+Cách chạy test: `npm test` (đã thêm script). Tài liệu dùng lại: `web/src/framework/README.md`.
+
+---
+
+# Đợt chỉnh #5 — Toàn bộ tư thế nhân vật + tọa độ kiếm so với thân (2026-10-25)
+
+Phương pháp: harness chụp pose trong game sống (đóng băng clip tại thời điểm t, orbit camera, đo trục
+lưỡi thật qua trailBase→trailTip), chỉnh live trên trang rồi bake vào source. Timing combat
+(`dur`, `hitAt`) không đổi — chỉ hình thế.
+
+| # | Hạng mục | Trạng thái | Bằng chứng |
+|---|---|---|---|
+| 1 | **Tọa độ kiếm vs thân (lõi)** | **Đạt** | Trước: lưỡi chạy dọc trục cẳng tay → giơ tay là kiếm dựng sát đầu. Sau: `weaponAnchor.rotation.set(0.65, 0, 0)` trong `humanoid.js` — lưỡi nhô khỏi nắm tay theo trục ngón tay; áp dụng cho MỌI nhân vật (player, NPC, boss). Đo trục lưỡi 3 giá trị anchor (-0.5/0/+0.5) xác nhận chiều xoay trước khi chọn 0.65 |
+| 2 | Tư thế cầm kiếm (idle/locomotion) | **Đạt** | Idle: kiếm đứng thẳng trước hông phải như thế cầm nghỉ chuẩn; di chuyển giữ kiếm sát hông (screenshot trước/sau) |
+| 3 | Tư thế đánh | **Đạt** | light1:antic → thế vung ngang sau đầu đúng nghĩa chamber (trước: kiếm dựng cạnh đầu); heavy1/heavy2/e_slam/e_overhead: thêm track `armR_hand` gập cổ tay để lưỡi đập chéo xuống ở frame trúng (0.66–1.1); light1 strike/light3/light2 giữ nhịp |
+| 4 | Tư thế chạy/đi/block | **Đạt** | run: kiếm ôm sát hông khi sải chân; block: lưỡi nằm ngang chắn ngực (screenshot) |
+| 5 | Không vỡ combat | **Đạt** | Đo thật: đánh trúng địch (HP 23→9), combo light1→light2, hết đòn về idle + stance hồi `stanceW 1.0`; `window.__errors` = 0; `npm test` 37/37; build production OK |
+| 6 | Giới hạn | **Minh bạch** | Góc anchor 0.65 là giá trị cân bằng chung cho mọi clip — nếu muốn mỗi đòn một góc riêng, cần per-clip anchor override (chưa làm); dead/stagger/jump giữ nguyên hình cũ (đã ổn) |
+
+Sự cố kiểm thử (không ảnh hưởng game): harness pose đầu tiên truyền sai tham số → `NaN` lan vào joints
+qua `_apply` khi `enabled=false` (blendT=0 + prev nhiễm); đã cô lập cơ chế và làm harness v2 tự kiểm
+NaN. Pane trình duyệt đôi khi bị throttle rAF giữa chừng (fps 0 tạm thời, tự hồi) — nhớ khi đo số liệu.

@@ -1,18 +1,14 @@
-// Base entity: transform, velocity, radius.
+// Base entity: framework BaseEntity + Vector3 của three.js + rig sync.
+// Hỗ trợ component runtime: entity.addComponent(new BaseComponent-derived()).
 import * as THREE from 'three';
+import { BaseEntity } from '../framework/core/entity.js';
 
-let NEXT_ID = 1;
-
-export class Entity {
+export class Entity extends BaseEntity {
   constructor(x, y, z) {
-    this.id = NEXT_ID++;
-    this.pos = new THREE.Vector3(x, y, z);
-    this.vel = new THREE.Vector3();
-    this.yaw = 0;
+    super(x, y, z, { vec3: (vx, vy, vz) => new THREE.Vector3(vx, vy, vz) });
     this.radius = 0.45;
     this.dead = false;
     this.rig = null;
-    this.disposed = false;
   }
 
   syncRig() {
@@ -22,14 +18,14 @@ export class Entity {
     }
   }
 
-  dispose(game) {
-    if (this.disposed) return;
-    this.disposed = true;
+  onDispose(game) {
     if (this.rig) {
       game.engine.scene.remove(this.rig.group);
       this.rig.dispose();
     }
   }
 
-  update(dt, game) {}
+  update(dt, game) {
+    super.update(dt, game); // component system + onUpdate hook
+  }
 }

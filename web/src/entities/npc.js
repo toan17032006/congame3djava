@@ -1,6 +1,6 @@
 // NPC: FSM AI (idle/patrol/chase/attack/strafe/block/dodge/retreat/flee), allies & villagers.
 import { Character } from './character.js';
-import { ENEMIES, NPC_ATTACKS } from '../data/enemies.js';
+import { enemies, NPC_ATTACKS } from '../data/enemies.js';
 import { isHostile } from '../systems/factions.js';
 
 export const EXTRA_DEFS = {
@@ -18,7 +18,7 @@ export const EXTRA_DEFS = {
     loot: [] },
 };
 
-export function enemyDef(id) { return ENEMIES[id] || EXTRA_DEFS[id]; }
+export function enemyDef(id) { return enemies.get(id) || EXTRA_DEFS[id]; }
 
 export class Npc extends Character {
   constructor(game, { enemyId, x, z, squad = null, levelScale = 1, bossDef = null }) {

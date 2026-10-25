@@ -1,4 +1,5 @@
 // Enemy archetypes. `moves` reference attack defs used by systems/combat.js.
+import { Registry } from '../framework/core/registry.js';
 // AI parameters shape behavior (systems/ai logic in entities/npc.js).
 export const ENEMIES = {
   bandit_grunt: { id: 'bandit_grunt', name: 'Sơn tặc', tier: 1,
@@ -81,6 +82,10 @@ export const ENEMIES = {
       moves: ['e_slam', 'e_guardbreak', 'e_sweep'] },
     loot: [{ id: 'demon_fang', chance: 0.45, qty: 1 }, { id: 'iron_ore', chance: 0.4, qty: 2 }] },
 };
+
+// Registry của framework: tra cứu theo id thay vì chỉ số mảng/objet rải rác.
+export const enemies = new Registry({ name: 'enemies' });
+enemies.registerAll(Object.values(ENEMIES));
 
 // NPC attack definitions (interpreted by combat system; `anim` maps to a clip name).
 export const NPC_ATTACKS = {

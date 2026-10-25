@@ -289,18 +289,19 @@ export class UIManager {
     host.querySelector('#set-vu').value = s.volMusic;
     host.querySelector('#set-va').value = s.volAmbient;
     const apply = () => {
-      s.quality = q.value;
-      s.resolutionScale = host.querySelector('#set-res').value;
-      s.targetFps = parseInt(host.querySelector('#set-fps').value, 10) || 60;
-      s.ao = host.querySelector('#set-ao').checked;
-      s.grain = host.querySelector('#set-grain').checked;
-      s.sensitivity = parseFloat(host.querySelector('#set-sens').value);
-      s.invertY = host.querySelector('#set-invert').checked;
-      s.volMaster = parseFloat(host.querySelector('#set-vm').value);
-      s.volSfx = parseFloat(host.querySelector('#set-vs').value);
-      s.volMusic = parseFloat(host.querySelector('#set-vu').value);
-      s.volAmbient = parseFloat(host.querySelector('#set-va').value);
-      g.applySettings();
+      g.settingsStore.set({
+        quality: q.value,
+        resolutionScale: host.querySelector('#set-res').value,
+        targetFps: parseInt(host.querySelector('#set-fps').value, 10) || 60,
+        ao: host.querySelector('#set-ao').checked,
+        grain: host.querySelector('#set-grain').checked,
+        sensitivity: parseFloat(host.querySelector('#set-sens').value),
+        invertY: host.querySelector('#set-invert').checked,
+        volMaster: parseFloat(host.querySelector('#set-vm').value),
+        volSfx: parseFloat(host.querySelector('#set-vs').value),
+        volMusic: parseFloat(host.querySelector('#set-vu').value),
+        volAmbient: parseFloat(host.querySelector('#set-va').value),
+      }); // onChanged → applySettings + persist tự động
     };
     host.querySelectorAll('input, select').forEach((i) => i.addEventListener('change', apply));
     host.querySelector('#set-back').addEventListener('click', () => {

@@ -16,12 +16,12 @@ const SWAY_STIFF = 85, SWAY_DAMP = 10.5, SWAY_MAX = 0.45;
 // Combat clips are never modified — the stance fades out during attacks/blocks/hit reactions.
 const WEAPON_STANCE = {
   idle: {
-    armR_sh: [-0.24, -0.08, -0.22], armR_el: [-0.5, 0, 0], armR_hand: [0.35, 0, 0.06],
+    armR_sh: [-0.24, -0.08, -0.22], armR_el: [-0.5, 0, 0], armR_hand: [0.05, 0, 0.06],
     armL_sh: [-0.05, 0.1, 0.3], armL_el: [-0.35, 0, 0],
     torso: [null, 0.1, null], hips: [null, -0.06, null],
   },
   move: {
-    armR_sh: [-0.4, -0.05, -0.3], armR_el: [-0.7, 0, 0], armR_hand: [0.22, 0, -0.05],
+    armR_sh: [-0.4, -0.05, -0.3], armR_el: [-0.7, 0, 0], armR_hand: [0.05, 0, -0.05],
     moveBlend: 0.72, // hold the blade steadier than the walk/run swing would
   },
 };

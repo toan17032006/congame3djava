@@ -1,11 +1,11 @@
 // Boss: phases by HP, telegraphed specials, summons, intro, enrage.
 import { Npc } from './npc.js';
-import { BOSSES, BOSS_ATTACKS } from '../data/bosses.js';
+import { bosses, BOSS_ATTACKS } from '../data/bosses.js';
 import { NPC_ATTACKS } from '../data/enemies.js';
 
 export class Boss extends Npc {
   constructor(game, { bossId, x, z, levelScale = 1 }) {
-    const def = BOSSES[bossId];
+    const def = bosses.get(bossId);
     super(game, { enemyId: bossId, x, z, levelScale, bossDef: def });
     this.bossDef = def;
     this.isBoss = true;

@@ -176,6 +176,9 @@ export function buildHumanoid(opts = {}) {
   // ================= anchors & extras =================
   const weaponAnchor = new THREE.Group();
   weaponAnchor.position.set(0, -0.06, 0.02);
+  // góc cầm kiếm: lưỡi nhô khỏi nắm tay theo trục ngón tay thay vì chạy dọc cẳng tay —
+  // mọi tư thế (đứng/đánh/chạy) đều đọc đúng như đang cầm chuôi thật
+  weaponAnchor.rotation.set(0.65, 0, 0);
   joints.armR_hand.add(weaponAnchor);
   // saya (scabbard) hanging on the left hip
   const saya = new THREE.Group();

@@ -1,4 +1,5 @@
 // Skill tree: 3 branches. Active skills are assigned to the U key.
+import { Registry } from '../framework/core/registry.js';
 export const SKILL_TREE = {
   blade: { name: 'Nhánh Đao', color: '#e06a5a', nodes: [
     { id: 'blade_1', name: 'Thế Kiếm Vững', tier: 1, cost: 1, requires: [], passive: { attackFlat: 4 }, desc: '+4 công kích.' },
@@ -25,6 +26,9 @@ export const SKILL_TREE = {
 
 export const ALL_SKILLS = {};
 for (const branch of Object.values(SKILL_TREE)) for (const n of branch.nodes) ALL_SKILLS[n.id] = n;
+
+export const skills = new Registry({ name: 'skills' });
+skills.registerAll(Object.values(ALL_SKILLS));
 
 // Passive modifier aggregation
 export function aggregatePassives(learnedIds) {

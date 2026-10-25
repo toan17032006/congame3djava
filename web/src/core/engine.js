@@ -8,6 +8,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { createGradingPass } from '../gfx/post.js';
+import { Ticker } from '../framework/core/ticker.js';
 
 const MIN_SCALE = 0.5, MAX_SCALE = 1.0;
 
@@ -21,10 +22,9 @@ export class Engine {
     this.renderer.toneMappingExposure = 1.05;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(66, window.innerWidth / window.innerHeight, 0.1, 900);
-    this.clock = new THREE.Clock();
-    this.timeScale = 1;          // hitstop drops this briefly
-    this._hitstop = 0;
-    this.stats = { fps: 0, frameMs: 0, drawCalls: 0, renderScale: 1, _acc: 0, _frames: 0 };
+    // vòng lặp qua framework Ticker: dt clamp, timeScale, hitstop, FPS stats
+    this.ticker = new Ticker({ update: (dt, rawDt) => this._frame(dt, rawDt), maxDt: 0.05 });
+    this.stats = Object.assign(this.ticker.stats, { drawCalls: 0, renderScale: 1 });
     this.quality = 'high';
     this.onBeforeRender = null;
     this._running = false;
@@ -146,8 +146,10 @@ export class Engine {
   // quality key for region builders (grass counts, terrain segments)
   get qualityKey() { return this.quality === 'cinematic' ? 'ultra' : this.quality; }
 
+  get timeScale() { return this.ticker.timeScale; }
+
   hitstop(seconds) {
-    this._hitstop = Math.max(this._hitstop, seconds);
+    this.ticker.hitstop(seconds);
   }
 
   _adaptive(rawDt) {
@@ -176,32 +178,18 @@ export class Engine {
   start(updateFn) {
     this._update = updateFn;
     this._running = true;
-    this.clock.start();
-    const loop = () => {
-      if (!this._running) return;
-      requestAnimationFrame(loop);
-      const rawDt = Math.min(this.clock.getDelta(), 0.05); // clamp long frames
-      if (this._hitstop > 0) { this._hitstop -= rawDt; this.timeScale = 0.06; }
-      else this.timeScale = 1;
-      const dt = rawDt * this.timeScale;
-      const t0 = performance.now();
-      this.renderer.info.reset();
-      if (this._update) this._update(dt, rawDt);
-      if (this.onBeforeRender) this.onBeforeRender();
-      if (this.composerEnabled) this.composer.render(dt);
-      else this.renderer.render(this.scene, this.camera);
-      const ms = performance.now() - t0;
-      this.stats.frameMs = this.stats.frameMs * 0.9 + ms * 0.1;
-      this.stats.drawCalls = this.renderer.info.render.calls;
-      this._adaptive(rawDt);
-      this.stats._acc += rawDt; this.stats._frames++;
-      if (this.stats._acc >= 0.5) {
-        this.stats.fps = Math.round(this.stats._frames / this.stats._acc);
-        this.stats._acc = 0; this.stats._frames = 0;
-      }
-    };
-    requestAnimationFrame(loop);
+    this.ticker.start();
   }
 
-  stop() { this._running = false; }
+  _frame(dt, rawDt) {
+    this.renderer.info.reset();
+    if (this._update) this._update(dt, rawDt);
+    if (this.onBeforeRender) this.onBeforeRender();
+    if (this.composerEnabled) this.composer.render(dt);
+    else this.renderer.render(this.scene, this.camera);
+    this.stats.drawCalls = this.renderer.info.render.calls;
+    this._adaptive(rawDt);
+  }
+
+  stop() { this._running = false; this.ticker.stop(); }
 }

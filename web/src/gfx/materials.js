@@ -1,36 +1,32 @@
-// Shared geometry/material caches + per-humanoid material factory.
+// Shared geometry/material caches (framework ResourceCache) + per-humanoid material factory.
 import * as THREE from 'three';
+import { ResourceCache } from '../framework/patterns/cache.js';
 
-const geoCache = new Map();
+const geoCache = new ResourceCache({ onDispose: (g) => g.dispose() });
 export function G(kind, ...args) {
-  const key = kind + args.join(',');
-  if (!geoCache.has(key)) {
-    let g;
-    switch (kind) {
-      case 'box': g = new THREE.BoxGeometry(...args); break;
-      case 'cyl': g = new THREE.CylinderGeometry(args[0], args[1], args[2], args[3] || 8); break;
-      case 'sph': g = new THREE.SphereGeometry(args[0], args[1] || 10, args[2] || 8); break;
-      case 'cone': g = new THREE.ConeGeometry(args[0], args[1], args[2] || 8); break;
-      case 'torus': g = new THREE.TorusGeometry(...args); break;
-      case 'plane': g = new THREE.PlaneGeometry(...args); break;
-      case 'circle': g = new THREE.CircleGeometry(...args); break;
-      case 'ring': g = new THREE.RingGeometry(...args); break;
-      case 'dode': g = new THREE.DodecahedronGeometry(...args); break;
-      case 'ico': g = new THREE.IcosahedronGeometry(...args); break;
-      default: throw new Error('unknown geo ' + kind);
-    }
-    geoCache.set(key, g);
-  }
-  return geoCache.get(key);
+  return geoCache.get(kind + args.join(','), () => buildGeo(kind, args));
 }
 
-const matCache = new Map();
-export function M(color, opts = {}) {
-  const key = color + JSON.stringify(opts);
-  if (!matCache.has(key)) {
-    matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: opts.rough ?? 0.85, metalness: opts.metal ?? 0.05, ...opts.extra }));
+function buildGeo(kind, args) {
+  switch (kind) {
+    case 'box': return new THREE.BoxGeometry(...args);
+    case 'cyl': return new THREE.CylinderGeometry(args[0], args[1], args[2], args[3] || 8);
+    case 'sph': return new THREE.SphereGeometry(args[0], args[1] || 10, args[2] || 8);
+    case 'cone': return new THREE.ConeGeometry(args[0], args[1], args[2] || 8);
+    case 'torus': return new THREE.TorusGeometry(...args);
+    case 'plane': return new THREE.PlaneGeometry(...args);
+    case 'circle': return new THREE.CircleGeometry(...args);
+    case 'ring': return new THREE.RingGeometry(...args);
+    case 'dode': return new THREE.DodecahedronGeometry(...args);
+    case 'ico': return new THREE.IcosahedronGeometry(...args);
+    default: throw new Error('unknown geo ' + kind);
   }
-  return matCache.get(key);
+}
+
+const matCache = new ResourceCache({ onDispose: (m) => m.dispose() });
+export function M(color, opts = {}) {
+  return matCache.get(color + JSON.stringify(opts), () =>
+    new THREE.MeshStandardMaterial({ color, roughness: opts.rough ?? 0.85, metalness: opts.metal ?? 0.05, ...opts.extra }));
 }
 
 // Per-character materials (owned, tintable, disposed with the rig)

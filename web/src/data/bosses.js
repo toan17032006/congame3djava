@@ -1,4 +1,5 @@
 // Boss definitions. Phases trigger by HP percentage; each phase alters the move pool.
+import { Registry } from '../framework/core/registry.js';
 export const BOSSES = {
   bandit_king: { id: 'bandit_king', name: 'Kurogane - Vua Sơn Tặc', title: 'Lãnh chúa hầm ngục rừng',
     hp: 600, attack: 20, defense: 8, speed: 4.4, poise: 100, xp: 420, coins: 250,
@@ -56,6 +57,9 @@ export const BOSSES = {
 };
 
 // Boss-only scripted attacks (projectiles / AoE handled by combat.js special-case)
+export const bosses = new Registry({ name: 'bosses' });
+bosses.registerAll(Object.values(BOSSES));
+
 export const BOSS_ATTACKS = {
   fire_nova: { name: 'Tu La Nộ', dmgMul: 1.6, dur: 2.0, hitAt: 0.6, range: 4.5, arc: 6.3, anim: 'e_slam', stamina: 0, knockback: 8, moveImpulse: 0, aoe: true, fire: true },
   fire_ring: { name: 'Vòng Lửa', dmgMul: 1.2, dur: 1.8, hitAt: 0.55, range: 0, arc: 0, anim: 'e_cast', stamina: 0, knockback: 5, moveImpulse: 0, projectileFan: { count: 8, speed: 14, fire: true, spread: 6.3 }, telegraph: 0.7 },

@@ -1,4 +1,5 @@
 // Item database. `model` fields drive the procedural mesh factory (gfx/humanoid.js).
+import { Registry } from '../framework/core/registry.js';
 export const RARITY = [
   { id: 0, name: 'Thường', color: '#9aa5ad' },
   { id: 1, name: 'Hiếm', color: '#6fc46f' },
@@ -91,5 +92,8 @@ export const MATERIALS = {
 export const ALL_ITEMS = { ...WEAPONS, ...ARMORS, ...HELMETS, ...ACCESSORIES, ...CONSUMABLES, ...MATERIALS };
 export const CURRENCY = { name: 'Vàng mon', icon: '🪙' };
 
-export function itemDef(id) { return ALL_ITEMS[id]; }
-export function stackable(id) { const t = ALL_ITEMS[id]?.type; return t === 'material' || t === 'consumable'; }
+export const items = new Registry({ name: 'items' });
+for (const [id, def] of Object.entries(ALL_ITEMS)) { def.id = def.id ?? id; items.register(def); }
+
+export function itemDef(id) { return items.get(id); }
+export function stackable(id) { const t = items.get(id)?.type; return t === 'material' || t === 'consumable'; }
