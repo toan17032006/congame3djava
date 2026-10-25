@@ -1,0 +1,17 @@
+{
+  "name": "samurai-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Samurai 3D Action RPG - web client",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}

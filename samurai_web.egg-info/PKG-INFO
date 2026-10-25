@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: samurai-web
+Version: 1.0.0
+Summary: Samurai 3D Action RPG - FastAPI backend + Three.js client
+Requires-Python: >=3.10
