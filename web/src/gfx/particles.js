@@ -96,10 +96,21 @@ export class Weather {
     if (type === 'snow') { colorA = [0.9, 0.95, 1.0]; speed = [0.3, -1.6, 0.2]; }
     this.color = new THREE.Color(...colorA);
     this.baseSpeed = speed;
-    const mat = new THREE.PointsMaterial({
-      size: type === 'rain' ? 0.06 : 0.09, color: this.color, transparent: true, opacity: type === 'rain' ? 0.55 : 0.8,
-      depthWrite: false, blending: type === 'embers' || type === 'rain' ? THREE.AdditiveBlending : THREE.NormalBlending,
-    });
+    if (type === 'rain') {
+      // rain as vertical streaks (line segments: head + tail per drop)
+      const linePos = new Float32Array(count * 2 * 3);
+      geo.setAttribute('position', new THREE.BufferAttribute(linePos, 3).setUsage(THREE.DynamicDrawUsage));
+      const mat = new THREE.LineBasicMaterial({ color: 0xa8bad0, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending, depthWrite: false });
+      this.points = new THREE.LineSegments(geo, mat);
+      this.streak = 0.055;
+    } else {
+      const mat = new THREE.PointsMaterial({
+        size: 0.09, color: this.color, transparent: true, opacity: 0.8,
+        depthWrite: false, blending: type === 'embers' ? THREE.AdditiveBlending : THREE.NormalBlending,
+      });
+      this.points = new THREE.Points(geo, mat);
+      geo.setAttribute('position', new THREE.BufferAttribute(this.p, 3).setUsage(THREE.DynamicDrawUsage));
+    }
     for (let i = 0; i < count; i++) {
       this.p[i * 3] = (Math.random() - 0.5) * area * 2;
       this.p[i * 3 + 1] = Math.random() * 18;
@@ -109,11 +120,9 @@ export class Weather {
       this.v[i * 3 + 1] = speed[1] * (0.7 + Math.random() * 0.6);
       this.v[i * 3 + 2] = speed[2] * (0.7 + Math.random() * 0.6);
     }
-    geo.setAttribute('position', new THREE.BufferAttribute(this.p, 3).setUsage(THREE.DynamicDrawUsage));
-    this.points = new THREE.Points(geo, mat);
     this.points.frustumCulled = false;
     scene.add(this.points);
-    this.geo = geo; this.mat = mat;
+    this.geo = geo; this.mat = this.points.material;
   }
 
   update(dt, center) {
@@ -130,6 +139,15 @@ export class Weather {
       if (Math.abs(x - center.x) > a) x = center.x - Math.sign(x - center.x) * a;
       if (Math.abs(z - center.z) > a) z = center.z - Math.sign(z - center.z) * a;
       this.p[i * 3] = x; this.p[i * 3 + 1] = y; this.p[i * 3 + 2] = z;
+    }
+    if (this.type === 'rain') {
+      // write head+tail into the line buffer
+      const lp = this.geo.attributes.position.array;
+      for (let i = 0; i < this.count; i++) {
+        const x = this.p[i * 3], y = this.p[i * 3 + 1], z = this.p[i * 3 + 2];
+        lp[i * 6] = x; lp[i * 6 + 1] = y; lp[i * 6 + 2] = z;
+        lp[i * 6 + 3] = x - this.v[i * 3] * this.streak; lp[i * 6 + 4] = y - this.v[i * 3 + 1] * this.streak; lp[i * 6 + 5] = z - this.v[i * 3 + 2] * this.streak;
+      }
     }
     this.geo.attributes.position.needsUpdate = true;
   }

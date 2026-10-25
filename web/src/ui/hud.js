@@ -27,7 +27,10 @@ export class HUD {
         <div class="boss-hp"><div class="boss-hpfill" id="hud-bosshp"></div></div>
       </div>
       <div class="hud-bl">
-        <div class="bar hpbar"><div class="hpfill" id="hud-hp"></div><span class="bartext" id="hud-hptext"></span></div>
+        <div class="hp-wrap">
+          <div class="level-badge" id="hud-levelbadge">1</div>
+          <div class="bar hpbar"><div class="hpfill" id="hud-hp"></div><span class="bartext" id="hud-hptext"></span></div>
+        </div>
         <div class="bar stabar"><div class="stafill" id="hud-sta"></div></div>
         <div class="skill-slot" id="hud-skill" title="Kỹ năng (U)">
           <span class="skill-key">U</span>
@@ -108,6 +111,9 @@ export class HUD {
     const lv = `Cấp ${g.progression.level}`;
     const lEl = this.root.querySelector('#hud-clevel');
     if (lEl.textContent !== lv) lEl.textContent = lv;
+    const badge = this.root.querySelector('#hud-levelbadge');
+    const bn = String(g.progression.level);
+    if (badge.textContent !== bn) badge.textContent = bn;
     // buffs
     const buffs = p.buffs.filter((b) => b.stat !== 'nextHitPct' || b.until > g.time).map((b) => {
       const names = { attackPct: 'Công+', defensePct: 'Thủ+', noStagger: 'Bất hoại', lowHpAttack: 'Trống chiến' };
@@ -125,8 +131,8 @@ export class HUD {
     this._fpsT += dt;
     if (this._fpsT > 0.5) {
       this._fpsT = 0;
-      this.root.querySelector('#hud-fps').textContent = `${g.engine.stats.fps} FPS · ${g.engine.stats.frameMs.toFixed(1)}ms · ${g.qualityLabel || ''}`;
-      if (g.engine.quality === 'low') g.engine.qualityLabel = 'thấp'; else g.engine.qualityLabel = '';
+      const qNames = { ultra: 'Ultra', high: 'Cao', medium: 'TB', low: 'Thấp' };
+      this.root.querySelector('#hud-fps').textContent = `${g.engine.stats.fps} FPS · ${g.engine.stats.frameMs.toFixed(1)}ms · ${qNames[g.engine.quality] || ''}`;
     }
   }
 }

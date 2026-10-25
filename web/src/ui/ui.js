@@ -252,7 +252,7 @@ export class UIManager {
         <h3>Cài đặt</h3>
         <label>Chất lượng đồ họa
           <select id="set-quality">
-            <option value="low">Thấp</option><option value="medium">Trung bình</option><option value="high">Cao</option>
+            <option value="low">Thấp</option><option value="medium">Trung bình</option><option value="high">Cao</option><option value="ultra">Cực cao (Ultra)</option>
           </select></label>
         <label>Độ nhạy chuột <input id="set-sens" type="range" min="0.4" max="2" step="0.1"></label>
         <label><input id="set-invert" type="checkbox"> Đảo trục Y</label>

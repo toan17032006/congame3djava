@@ -60,6 +60,7 @@ export class Player extends Character {
     if (this.lockTarget && !this.lockTarget.combat.dead) this.faceToward(this.lockTarget.pos.x, this.lockTarget.pos.z, 0.016, 40);
     else if (!this.moving) this.faceDir(this.game.cameraRig.flatForward().x, this.game.cameraRig.flatForward().z, 0.016, 40);
     this.startAttack(def);
+    if (this._trail) this._trail.setColor(kind === 'heavy' ? 0xffd8a8 : 0xbfd8ff);
     this.game.audio.sfx(def.name.startsWith('heavy') ? 'swingHeavy' : 'swing');
   }
 
@@ -97,6 +98,7 @@ export class Player extends Character {
     this.state = 'skill';
     this.combat.blocking = false;
     this.startAttack({ ...def, id: 'skill_' + active.skill }, { isSkill: true });
+    if (this._trail) this._trail.setColor(active.skill === 'iai' ? 0x7ae0ff : active.skill === 'whirlwind' ? 0xaef0ff : 0xc8a0ff);
     if (def.buff) this.addBuff('nextHitPct', def.buff.nextHitPct, def.buff.duration);
     if (def.selfBuff) {
       this.addBuff('defensePct', def.selfBuff.defensePct, def.selfBuff.duration);
@@ -234,10 +236,16 @@ export class Player extends Character {
         if (!this.moving && this.anim.name === 'sprint') this.anim.play('idle');
       }
 
-      // footsteps
+      // footsteps + dust
       if (this.moving && this.grounded) {
         this.stepT -= dt * (sprint ? 2.6 : 1.6);
-        if (this.stepT <= 0) { this.stepT = 0.4; game.audio.sfx('step'); }
+        if (this.stepT <= 0) {
+          this.stepT = 0.4;
+          game.audio.sfx('step');
+          const dust = game.world.def ? game.world.def.palette.dirt : 0x9a8a6a;
+          game.particles.spawn({ x: this.pos.x, y: this.pos.y + 0.08, z: this.pos.z },
+            { count: sprint ? 5 : 2, color: [dust, 0xbcae94], speed: 1.3, life: 0.45, gravity: -1.5, spread: 0.35 });
+        }
       }
       this.moveMode = sprint ? 'sprint' : this.moving ? 'run' : 'idle';
     }

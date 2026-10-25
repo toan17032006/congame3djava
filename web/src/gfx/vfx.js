@@ -3,11 +3,16 @@ import * as THREE from 'three';
 import { G } from './materials.js';
 
 function makeArcMesh() {
-  const geo = G('torus', 1, 0.045, 3, 24, Math.PI * 0.85);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffe8c0, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-  const m = new THREE.Mesh(geo, mat);
-  m.rotation.z = -Math.PI * 0.425;
-  return m;
+  const g = new THREE.Group();
+  const wide = new THREE.Mesh(
+    G('torus', 1, 0.075, 3, 24, Math.PI * 0.85),
+    new THREE.MeshBasicMaterial({ color: 0xffe8c0, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  const core = new THREE.Mesh(
+    G('torus', 1, 0.028, 3, 24, Math.PI * 0.85),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  wide.rotation.z = core.rotation.z = -Math.PI * 0.425;
+  g.add(wide, core);
+  return g;
 }
 
 function makePopupTexture() {
@@ -56,7 +61,8 @@ export class Vfx {
     const slot = this.arcs.find((a) => a.t >= a.dur) || this.arcs[0];
     slot.t = 0; slot.dur = 0.16;
     slot.mesh.visible = true;
-    slot.mesh.material.color.setHex(color);
+    slot.mesh.children[0].material.color.setHex(color);
+    slot.mesh.children[1].material.color.setHex(0xffffff);
     slot.mesh.position.set(pos.x, pos.y + 1.15, pos.z);
     slot.mesh.rotation.y = yaw + Math.PI * 0.075;
     slot.mesh.scale.setScalar(range * 0.62);
@@ -108,7 +114,8 @@ export class Vfx {
       if (a.t >= a.dur) { a.mesh.visible = false; continue; }
       a.t += dt;
       const f = a.t / a.dur;
-      a.mesh.material.opacity = 0.9 * (1 - f);
+      a.mesh.children[0].material.opacity = 0.34 * (1 - f);
+      a.mesh.children[1].material.opacity = 0.88 * (1 - f);
       a.mesh.scale.setScalar(a.mesh.scale.x * (1 + dt * 2.5));
       if (a.t >= a.dur) a.mesh.visible = false;
     }

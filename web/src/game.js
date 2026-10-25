@@ -33,7 +33,7 @@ export class Game {
     this.quests = new QuestSystem(this);
     this.saveSystem = new SaveSystem(this);
     this.levelManager = new LevelManager(this);
-    this.sky = new Sky(this.engine.scene);
+    this.sky = new Sky(this.engine);
     this.particles = new ParticleSystem(this.engine.scene);
     this.vfx = new Vfx(this.engine.scene);
     this.audio = new AudioMgr();

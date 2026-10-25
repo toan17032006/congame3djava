@@ -5,6 +5,7 @@ import { Animator } from '../gfx/animator.js';
 import { CLIPS } from '../gfx/clips.js';
 import { buildHumanoid } from '../gfx/humanoid.js';
 import { angleWrap, clamp } from '../core/utils.js';
+import { Trail } from '../gfx/trail.js';
 
 const GRAVITY = -18;
 
@@ -44,6 +45,52 @@ export class Character extends Entity {
     this.grounded = true;
     this.airTime = 0;
     this.lastStrikeId = 0;
+    // weapon trail only for the hero and bosses (perf)
+    this._trail = null;
+    if (this.isPlayer || cfg.isBoss) {
+      this._trail = new Trail(game.engine.scene, cfg.trailColor ?? (this.isPlayer ? 0xbfd8ff : 0x9fb0e8));
+    }
+  }
+
+  dispose(game) {
+    if (this._trail) { this._trail.dispose(); this._trail = null; }
+    super.dispose(game);
+  }
+
+  // additive motion layered on top of the clip: breathing + head look-at
+  _animOverlay(dt) {
+    if (this.combat.dead) return;
+    const J = this.rig.joints;
+    const name = this.anim.name;
+    const t = this.game.time;
+    if (name === 'idle' || name === 'block' || name === 'walk') {
+      J.torso.rotation.x += Math.sin(t * 1.8 + this.id) * 0.014;
+      J.head.rotation.z += Math.sin(t * 0.6 + this.id * 2) * 0.02;
+      J.armL_sh.rotation.z += Math.sin(t * 1.8 + this.id) * 0.012;
+    } else if (name === 'run' || name === 'sprint') {
+      J.torso.rotation.z += Math.sin(t * 9 + this.id) * 0.02;
+    }
+    // head tracks the lock/aggro target
+    const tgt = this.isPlayer ? this.lockTarget : (this.aggro ? this.target : null);
+    if (tgt && !tgt.combat.dead && !this.combat.attack && this.combat.staggered <= 0) {
+      const dx = tgt.pos.x - this.pos.x, dz = tgt.pos.z - this.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 30) {
+        const wantYaw = Math.atan2(dx, dz);
+        const rel = angleWrap(wantYaw - this.yaw);
+        const dy = (tgt.pos.y + 1.4) - (this.pos.y + 1.55);
+        const wantPitch = Math.atan2(dy, d);
+        J.head.rotation.y += clamp(rel, -0.7, 0.7) * 0.55;
+        J.head.rotation.x -= clamp(wantPitch, -0.35, 0.45) * 0.4;
+      }
+    }
+  }
+
+  _updateTrail(dt) {
+    if (!this._trail) return;
+    const atk = this.combat.attack;
+    const active = !!atk && atk.t / atk.def.dur > 0.12 && atk.t / atk.def.dur < 0.85;
+    this._trail.update(active, this.rig, dt);
   }
 
   get maxHp() { return this.stats.maxHp; }
@@ -104,7 +151,11 @@ export class Character extends Entity {
     if (this.pos.y <= ground) {
       if (!this.grounded && this.vel.y < -6) {
         this.anim.play('land', { restart: true });
-        if (this.isPlayer) game.cameraRig.shake(0.12);
+        if (this.isPlayer) {
+          game.cameraRig.shake(0.12);
+          game.particles.spawn({ x: this.pos.x, y: this.pos.y + 0.1, z: this.pos.z },
+            { count: 10, color: [0xb0a48a, 0x8a8070], speed: 2.2, life: 0.5, gravity: -3, spread: 0.7 });
+        }
       }
       this.pos.y = ground; this.vel.y = 0; this.grounded = true;
     } else this.grounded = false;
@@ -191,8 +242,9 @@ export class Character extends Entity {
       amount *= 0.15;
       this.game.audio.sfx('block');
       this.game.vfx.popup(this.pos, 'Chặn', '#9ab0c8');
+      if (!this.combat.attack) this.anim.play('blockHit', { blend: 0.05, restart: true });
       this.game.particles.spawn({ x: this.pos.x + Math.sin(this.yaw) * 0.6, y: this.pos.y + 1.1, z: this.pos.z + Math.cos(this.yaw) * 0.6 },
-        { count: 6, color: [0xbfd8ff, 0xffffff], speed: 3, life: 0.25, spread: 0.4 });
+        { count: 10, color: [0xfff0c0, 0xbfd8ff, 0xffffff], speed: 5, life: 0.3, spread: 0.35, gravity: -6 });
     }
 
     if (this.hasBuff('noStagger')) { /* ironwill: no reaction */ }
@@ -331,6 +383,8 @@ export class Character extends Entity {
       if (this.ghost && !on) this.rig.mats.cloth.emissive.copy(new THREE.Color(this.rig.mats.cloth.color).multiplyScalar(0.25));
     }
     this.anim.update(dt);
+    this._animOverlay(dt);
+    this._updateTrail(dt);
     this.syncRig();
   }
 }

@@ -3,7 +3,10 @@ import * as THREE from 'three';
 import { makeNoise2D, mulberry32, clamp } from '../core/utils.js';
 import { buildTerrain } from '../gfx/terrain.js';
 import { makeTree, makeBambooField, makeRock, makeLantern, makeHouse, makeTorii, makeBanner,
-  makeShrineHall, makeGrave, makeStatue, makeWallSegment, makeKeepTower, makeCastleGate, makeCampfire } from '../gfx/props.js';
+  makeShrineHall, makeGrave, makeStatue, makeWallSegment, makeKeepTower, makeCastleGate, makeCampfire,
+  makeMountain } from '../gfx/props.js';
+import { buildGrass } from '../gfx/grass.js';
+import { WIND, disposeSwayMaterials } from '../gfx/wind.js';
 import { Interactable } from '../entities/interactable.js';
 
 export class World {
@@ -61,7 +64,7 @@ export class World {
       return h;
     };
 
-    const ter = buildTerrain(this, def);
+    const ter = buildTerrain(this, def, game.engine.quality);
     this.group.add(ter.mesh);
     this.owned.push(ter);
     this.regionGroup = new THREE.Group();
@@ -69,6 +72,9 @@ export class World {
 
     this.buildProps(def, rng, noise);
     this.buildLandmarks(def, rng);
+    this.buildBackdrop(def, rng);
+    this.grass = buildGrass(this, def, rng, noise, game.engine.quality);
+    if (this.grass) this.regionGroup.add(this.grass.mesh);
     return true;
   }
 
@@ -313,6 +319,23 @@ export class World {
     }
   }
 
+  // distant mountain ring so the horizon never shows a flat edge
+  buildBackdrop(def, rng) {
+    if (def.builder === 'cave' || def.builder === 'throne') return;
+    const size = def.size;
+    const count = def.builder === 'mountain' ? 5 : 11;
+    const fog = new THREE.Color(def.sky.bottom);
+    const tint = new THREE.Color(def.palette.rock).lerp(fog, 0.45);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + rng() * 0.4;
+      const r = size * (0.68 + rng() * 0.16);
+      const m = makeMountain(rng, tint.getHex());
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      m.position.set(x, this.heightFn(x, z) - 6, z);
+      this.regionGroup.add(m);
+    }
+  }
+
   // ---- queries ------------------------------------------------------------
   groundAt(x, z) {
     if (!this.def) return 0;
@@ -403,6 +426,7 @@ export class World {
   }
 
   update(dt) {
+    WIND.uTime.value = this.game.time;
     for (const it of this.interactables) it.update(dt);
   }
 
@@ -418,6 +442,12 @@ export class World {
       if (o.mat) o.mat.dispose();
     }
     this.owned = [];
+    if (this.grass) {
+      this.grass.geo.dispose();
+      this.grass.mesh.parent?.remove(this.grass.mesh);
+      this.grass = null;
+    }
+    disposeSwayMaterials();
     for (const it of this.interactables) it.dispose(this.game);
     this.interactables = [];
     this.colliders = [];

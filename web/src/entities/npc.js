@@ -27,6 +27,7 @@ export class Npc extends Character {
     super(game, {
       x, y: game.world ? game.world.groundAt(x, z) : 0, z,
       name: def.name, faction: def.faction || (bossDef ? 'bandit' : factionOf(enemyId)),
+      isBoss: !!bossDef, trailColor: bossDef ? (bossDef.fire ? 0xff9a50 : bossDef.ghost ? 0x9a8aff : 0xffb08a) : undefined,
       stats: { maxHp: Math.round(def.hp * scaleHp), attack: Math.round(def.attack * Math.sqrt(levelScale)), defense: def.defense, speed: def.speed, poise: def.poise },
       colors: def.colors, scale: def.scale || 1, ghost: def.ghost,
       weaponModel: def.weapon || null,
