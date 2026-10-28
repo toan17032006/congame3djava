@@ -79,6 +79,11 @@ Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy l�
 | Esc | Tạm dừng / tiếp tục |
 | F5 | Lưu game ngay lập tức |
 | F6 | Bật / tắt nhạc nền và tiếng gió |
+| O | Mở / đóng cây kỹ năng (game tạm dừng) |
+| B | Mở / đóng cửa hàng (game tạm dừng) |
+| Y | Cuồng Phong Trảm (cần học, xem mục 5.9) |
+| T | Tốc Ảnh (cần học, xem mục 5.9) |
+| G | Thân Bất Hoại (cần học, xem mục 5.9) |
 | N | Sang màn tiếp (chỉ ở màn hình hoàn thành màn) |
 | R | Chơi lại màn (chỉ ở màn hình gục ngã) |
 | M | Về menu (ở màn tạm dừng, gục ngã, hoàn thành màn, chiến thắng) |
@@ -161,6 +166,12 @@ và bóng đổ tròn dưới chân. Boss có thêm hào quang đỏ nhấp nhá
 - **Kiếm góc nhìn thứ nhất của bạn**: katana hiện ở góc dưới phải màn hình, nhún
   theo bước chân, vung lên/chém xuống khi bạn bấm J/K/U, và đưa ra giữa dựng đứng
   khi bạn giữ L để đỡ.
+- **Humanoid v2**: thêm giáp ngực kim loại (chỉ boss, Quỷ khiên thủ và Bạo đồ mới
+  có, như bản web bật/tắt giáp theo trang bị), vai giáp, cổ áo kimono chữ V màu
+  trắng, dây sash, hakama, bao chân, dép, mắt, mũi, vỏ kiếm saya đeo sau lưng,
+  và lưỡi kiếm có đường hamon trắng. Ánh sáng cũng đổi theo màn: màn tối
+  (như Mạc Phủ Bóng Tối) sẽ tối hơn, màn ngày sáng hơn. Màn hình có thêm
+  vignette tối ở viền và chớp đỏ nhấp nháy khi máu dưới 30%.
 - **Hạt văng (particles)**: khi trúng đòn, nhặt đồ, hạ địch, parry, qua màn… sẽ có
   các hạt cầu nhỏ bay ra, rơi xuống theo trọng lực và nhỏ dần rồi biến mất.
 
@@ -288,6 +299,48 @@ theo cách riêng ở trên). Bấm **Tab** để xem túi đồ.
 - Màn hình menu, tạm dừng, gục ngã, hoàn thành màn và chiến thắng đều có hướng dẫn
   phím bấm ngay trên màn hình, không cần nhớ hết từ README.
 
+### 5.9. Cây kỹ năng (như bản web, 3 nhánh × 5 node)
+
+Mỗi lần lên cấp bạn nhận **1 điểm kỹ năng**. Bấm **O** để mở cây kỹ năng
+(game tạm dừng), dùng W/S hoặc ↑/↓ để chọn, Enter để học. Kỹ năng đã học
+không học lại được, kỹ năng cần kỹ năng yêu cầu trước đó và đủ điểm mới học được.
+Điểm và kỹ năng đã học được lưu vào `samurai_save.txt`, file lưu cũ (trước khi
+có kỹ năng) vẫn tải được, với điểm = 0 và chưa học kỹ năng nào.
+
+| Nhánh | Node | Yêu cầu | Giá | Tác dụng |
+| --- | --- | --- | --- | --- |
+| Đao | Thế Kiếm Vững | — | 1 | +4 công kích |
+| Đao | Nhất Đao Trảm (nâng cấp) | Thế Kiếm Vững | 1 | U hồi chiêu 5s → 3s, sát thương +10 |
+| Đao | Điểm Huyết | Thế Kiếm Vững | 2 | +6% chí mạng |
+| Đao | Cuồng Phong Trảm (chủ động, phím Y) | 2 node Đao trên | 2 | Xoay tròn chém diện rộng quanh mình, tốn 45 khí lực, hồi 12s |
+| Đao | Sát Khí | Cuồng Phong Trảm | 3 | +12% công kích |
+| Gió | Bước Nhẹ | — | 1 | −10% tiêu hao khí lực né và chạy nhanh |
+| Gió | Né Ảnh | Bước Nhẹ | 1 | +0,12s bất khả xâm phạm khi né |
+| Gió | Hành Vân | Bước Nhẹ | 2 | +10% tốc chạy |
+| Gió | Tốc Ảnh (chủ động, phím T) | 2 node Gió trên | 2 | Lao nhanh về trước, đòn kế +80% sát thương, tốn 30 khí lực, hồi 9s |
+| Gió | Hơi Thở Gió | Tốc Ảnh | 3 | +10 khí lực hồi mỗi giây |
+| Tâm | Bản Lĩnh | — | 1 | +25 máu tối đa |
+| Tâm | Tâm Không | Bản Lĩnh | 1 | +0,08s cửa sổ parry |
+| Tâm | Lưng Sắt | Bản Lĩnh | 2 | +8 phòng thủ (giảm sát thương địch gây ra) |
+| Tâm | Thân Bất Hoại (chủ động, phím G) | 2 node Tâm trên | 2 | 10 giây sát thương nhận vào giảm một nửa, tốn 25 khí lực, hồi 20s |
+| Tâm | Kiếm Thánh | Thân Bất Hoại | 3 | +30 khí lực tối đa, +10% kinh nghiệm |
+
+### 5.10. Cửa hàng (vàng giờ đã dùng được)
+
+Bấm **B** để mở cửa hàng (game tạm dừng), dùng W/S hoặc ↑/↓ để chọn, Enter để mua.
+Vàng kiếm được từ hạ địch và thưởng qua màn giờ dùng để mua đồ, thay vì chỉ tích lũy.
+
+| Hàng | Giá |
+| --- | --- |
+| Băng gạc | 50 vàng |
+| Thuốc hồi máu | 120 vàng |
+| Tre | 20 vàng |
+| Thảo dược | 20 vàng |
+| Quặng sắt | 80 vàng |
+| Rèn kiếm +5 sát thương | 600 vàng |
+
+Mua xong sẽ lưu ngay vào file lưu (qua `samurai_save.txt`).
+
 ## 6. Cấu trúc mã nguồn
 
 ```
@@ -303,7 +356,8 @@ src/main/java/vn/samurai/
 │   │                           # AI địch, đạn, boss pha, rig humanoid, hạt, bầu trời, kiếm FPS,
 │   │                           # tiếng Việt (font DejaVu qua FreeType)
 │   ├── TextureFactory.java     # Texture procedural bằng Pixmap: đá, đất, cỏ, gỗ, vải, kim loại
-│   └── AudioManager.java       # Tổng hợp WAV: nhạc koto/taiko, gió, 23 SFX; phát bằng LibGDX
+│   ├── AudioManager.java       # Tổng hợp WAV: nhạc koto/taiko, gió, 23 SFX; phát bằng LibGDX
+│   └── SkillTree.java          # Cây kỹ năng 15 node (Đao/Gió/Tâm) như bản web, kèm điều kiện học
 ├── Levels.java     # Dữ liệu 8 chương: bản đồ dạng lưới ký tự, nhiệm vụ, thưởng, màu trời/sàn
 ├── Level.java      # Một chương: đọc bản đồ, tường/cây, tầm nhìn, mục tiêu, boss còn sống
 ├── Enemy.java      # Dữ liệu địch và boss: máu, tấn công, giáp, tốc độ, tầm nhìn, tỉ lệ đỡ/né
@@ -324,10 +378,13 @@ Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn �
 
 ## 7. Giới hạn đã biết (minh bạch)
 
-- Đồ họa đã là 3D thật với texture, rig và animation, nhưng mô hình vẫn là hình khối
-  hình học cơ bản (hộp, nón, cầu) với các chi tiết lắp ghép, chưa phải mô hình nhân vật
-  low-poly với skeletal animation và shader PBR đầy đủ như bản web Three.js, chưa có
-  texture normal-map, bloom/post-processing, hay cỏ instanced hàng nghìn bụi như bản web.
+- Đồ họa đã là 3D thật với texture, rig v2 và animation, nhưng mô hình vẫn là hình khối
+  hình học lắp ghép, chưa phải mô hình nhân vật low-poly với skeletal animation
+  (xương + skinning) và shader PBR + normal-map + bloom/post-processing đầy đủ như
+  bản web Three.js, chưa có cỏ instanced hàng nghìn bụi như bản web.
+- Chưa có: 15 màn đầy đủ của bản web (bản này vẫn 8 chương), phe phái, NPC đối thoại,
+  nhiệm vụ sóng (waves) / phòng thủ, và multiplayer/server. Cây kỹ năng và cửa hàng
+  đã có, nhưng phe phái và NPC vẫn chưa có.
 - Không có multiplayer, không có server, không có cửa hàng mua bán, không có cây kỹ năng
   15 node và hệ phe phái đầy đủ như bản web. Kỹ năng trong bản Java chỉ có Nhất Đao Trảm (U).
 - Không có nhảy (Space) và đổi góc nhìn thứ nhất/thứ ba như bản web; bản LibGDX chỉ có

@@ -82,7 +82,8 @@ public class SamuraiScreen implements Screen {
     private static final int[] ACTION_KEYS = {
             Keys.ENTER, Keys.L, Keys.R, Keys.N, Keys.M, Keys.ESCAPE, Keys.F5,
             Keys.TAB, Keys.J, Keys.K, Keys.U, Keys.I, Keys.F, Keys.C,
-            Keys.NUM_1, Keys.NUM_2, Keys.F6
+            Keys.NUM_1, Keys.NUM_2, Keys.F6,
+            Keys.O, Keys.B, Keys.Y, Keys.T, Keys.G, Keys.UP, Keys.DOWN
     };
 
     private final File saveFile = new File("samurai_save.txt");
@@ -103,6 +104,10 @@ public class SamuraiScreen implements Screen {
     private double lastStaminaUse = -10;
     private double attackTimer = 0, attackDuration = 0, attackHitDelay = 0, attackCooldown = 0;
     private double skillCooldown = 0, dodgeCooldown = 0;
+    private double whirlwindCooldown = 0, windstepCooldown = 0, ironwillCooldown = 0;
+    private boolean showSkills = false, showShop = false;
+    private int skillSelection = 0, shopSelection = 0;
+    private DirectionalLight dirLight;
     private int attackKind = 0;
     private boolean attackApplied = false;
     private double stepTimer = 0;
@@ -142,6 +147,17 @@ public class SamuraiScreen implements Screen {
     private com.badlogic.gdx.graphics.g3d.Model starModel;
     private com.badlogic.gdx.graphics.g3d.Model glowModel;
     private com.badlogic.gdx.graphics.g3d.Model grassModel;
+    private com.badlogic.gdx.graphics.g3d.Model plateModel;
+    private com.badlogic.gdx.graphics.g3d.Model pauldronModel;
+    private com.badlogic.gdx.graphics.g3d.Model collarModel;
+    private com.badlogic.gdx.graphics.g3d.Model sashModel;
+    private com.badlogic.gdx.graphics.g3d.Model hakamaModel;
+    private com.badlogic.gdx.graphics.g3d.Model gaiterModel;
+    private com.badlogic.gdx.graphics.g3d.Model sandalModel;
+    private com.badlogic.gdx.graphics.g3d.Model eyeModel;
+    private com.badlogic.gdx.graphics.g3d.Model noseModel;
+    private com.badlogic.gdx.graphics.g3d.Model sayaModel;
+    private com.badlogic.gdx.graphics.g3d.Model hamonModel;
     private com.badlogic.gdx.graphics.g3d.Model sphereSmallModel;
     private com.badlogic.gdx.graphics.g3d.Model boxSmallModel;
     private com.badlogic.gdx.graphics.g3d.Model toriiPillarModel;
@@ -158,7 +174,8 @@ public class SamuraiScreen implements Screen {
         modelBatch = new ModelBatch();
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.55f, 0.55f, 0.55f, 1f));
-        environment.add(new DirectionalLight().set(0.9f, 0.9f, 0.85f, -0.5f, -1f, -0.3f));
+        dirLight = new DirectionalLight().set(0.9f, 0.9f, 0.85f, -0.5f, -1f, -0.3f);
+        environment.add(dirLight);
         batch = new SpriteBatch();
         shapes = new ShapeRenderer();
         font = loadFont(16);
@@ -306,6 +323,17 @@ public class SamuraiScreen implements Screen {
         starModel = sphere(Color.WHITE, 0.15f);
         glowModel = transparentBox(new Color(1f, 0.2f, 0.2f, 1f), 0.25f, 1f, 1f, 1f);
         grassModel = texturedBox(foliageTex, new Color(0.6f, 0.9f, 0.5f, 1f), 0.06f, 0.45f, 0.06f);
+        plateModel = texturedBox(plateTex, new Color(0.75f, 0.76f, 0.8f, 1f), 0.68f, 0.5f, 0.4f);
+        pauldronModel = texturedBox(plateTex, new Color(0.75f, 0.76f, 0.8f, 1f), 0.18f, 0.12f, 0.24f);
+        collarModel = box(Color.WHITE, 0.06f, 0.36f, 0.03f);
+        sashModel = texturedBox(weaveTex, new Color(0.55f, 0.16f, 0.16f, 1f), 0.68f, 0.08f, 0.38f);
+        hakamaModel = texturedBox(weaveTex, new Color(0.45f, 0.45f, 0.5f, 1f), 0.5f, 0.45f, 0.35f);
+        gaiterModel = box(new Color(0.25f, 0.25f, 0.28f, 1f), 0.16f, 0.3f, 0.16f);
+        sandalModel = box(new Color(0.12f, 0.10f, 0.08f, 1f), 0.12f, 0.04f, 0.28f);
+        eyeModel = box(new Color(0.05f, 0.03f, 0.02f, 1f), 0.05f, 0.03f, 0.02f);
+        noseModel = box(new Color(0.72f, 0.60f, 0.48f, 1f), 0.04f, 0.07f, 0.04f);
+        sayaModel = box(new Color(0.10f, 0.08f, 0.06f, 1f), 0.09f, 0.95f, 0.09f);
+        hamonModel = box(Color.WHITE, 0.02f, 0.9f, 0.01f);
         sphereSmallModel = sphere(Color.WHITE, 0.22f);
         boxSmallModel = box(Color.WHITE, 0.4f, 0.4f, 0.4f);
         toriiPillarModel = texturedBox(woodTex, new Color(0.85f, 0.2f, 0.2f, 1f), 0.2f, 2.2f, 0.2f);
@@ -405,7 +433,11 @@ public class SamuraiScreen implements Screen {
         return m;
     }
 
-    // Rig part order: torso, obi, head, hair, topknot, armR, armL, legR, legL, swordBlade, swordGuard, shadow.
+    // Rig part order: 0 torso, 1 obi, 2 head, 3 hair, 4 topknot, 5 armR, 6 armL,
+    // 7 legR, 8 legL, 9 swordBlade, 10 swordGuard, 11 shadow,
+    // 12 plate, 13 pauldronL, 14 pauldronR, 15 collarL, 16 collarR, 17 sash,
+    // 18 hakama, 19 gaiterR, 20 gaiterL, 21 sandalR, 22 sandalL,
+    // 23 eyeL, 24 eyeR, 25 nose, 26 saya, 27 hamon.
     private ModelInstance[] enemyInstances(Enemy e) {
         ModelInstance[] parts = enemyModels.get(e);
         if (parts == null) {
@@ -421,11 +453,31 @@ public class SamuraiScreen implements Screen {
                     new ModelInstance(legModelFor(e)),
                     new ModelInstance(swordBladeModel),
                     new ModelInstance(swordGuardModel),
-                    new ModelInstance(shadowModel)
+                    new ModelInstance(shadowModel),
+                    new ModelInstance(plateModel),
+                    new ModelInstance(pauldronModel),
+                    new ModelInstance(pauldronModel),
+                    new ModelInstance(collarModel),
+                    new ModelInstance(collarModel),
+                    new ModelInstance(sashModel),
+                    new ModelInstance(hakamaModel),
+                    new ModelInstance(gaiterModel),
+                    new ModelInstance(gaiterModel),
+                    new ModelInstance(sandalModel),
+                    new ModelInstance(sandalModel),
+                    new ModelInstance(eyeModel),
+                    new ModelInstance(eyeModel),
+                    new ModelInstance(noseModel),
+                    new ModelInstance(sayaModel),
+                    new ModelInstance(hamonModel)
             };
             enemyModels.put(e, parts);
         }
         return parts;
+    }
+
+    private boolean hasArmour(Enemy e) {
+        return e.boss || e.kind.equals("oni_shield") || e.kind.equals("brute");
     }
 
     /** Place a model instance in the world, facing yaw degrees around Y. */
@@ -518,7 +570,7 @@ public class SamuraiScreen implements Screen {
         player.x = level.startX;
         player.y = level.startY;
         player.angle = level.startAngle;
-        player.stamina = 100;
+        player.stamina = player.maxStamina;
         player.iframes = 0;
         player.blocking = false;
         player.parryBonus = false;
@@ -529,10 +581,21 @@ public class SamuraiScreen implements Screen {
         particles.clear();
         deathTimes.clear();
         showInventory = false;
+        showSkills = false;
+        showShop = false;
+        whirlwindCooldown = 0;
+        windstepCooldown = 0;
+        ironwillCooldown = 0;
         if (healFull) player.hp = player.maxHp;
         if (wallModel != null) {
             buildStaticForLevel();
             buildSkyForLevel();
+            // Per-level lighting: dark levels (night) are dimmer, day levels bright.
+            int avg = (level.ceiling.r + level.ceiling.g + level.ceiling.b) / 3;
+            float amb = avg < 110 ? 0.35f : 0.55f;
+            float dir = avg < 110 ? 0.60f : 0.90f;
+            environment.set(new ColorAttribute(ColorAttribute.AmbientLight, amb, amb, amb, 1f));
+            if (dirLight != null) dirLight.set(dir, dir, dir * 0.95f, -0.5f, -1f, -0.3f);
         }
     }
 
@@ -622,7 +685,7 @@ public class SamuraiScreen implements Screen {
         attackTimer = attackDuration;
         attackApplied = false;
         attackCooldown = attackDuration;
-        if (kind == 3) skillCooldown = 5;
+        if (kind == 3) skillCooldown = player.hasSkill("blade_2") ? 3 : 5;
     }
 
     private void applyAttack() {
@@ -642,7 +705,11 @@ public class SamuraiScreen implements Screen {
                 continue;
             }
             boolean blocked = rng.nextDouble() < e.blockChance;
-            boolean crit = Combat.rollCrit(rng);
+            boolean crit = Combat.rollCrit(rng, player.critBonus);
+            if (player.windstepBonus) {
+                base = base * 9 / 5;
+                player.windstepBonus = false;
+            }
             int dmg = Combat.playerDamage(base, e.defense, crit, blocked, bonus);
             if (bonus) player.parryBonus = false;
             e.hp -= dmg;
@@ -678,15 +745,106 @@ public class SamuraiScreen implements Screen {
         }
     }
 
-    private void tryDodge() {
-        if (dodgeCooldown > 0 || player.stamina < 20) {
-            setMessage("Chưa né được: cần 20 khí lực và chờ hồi chiêu.");
+    private void buyShopItem(int idx) {
+        String name;
+        int price;
+        boolean ok = false;
+        switch (idx) {
+            case 0: name = "Băng gạc"; price = 50; if (player.coins >= price) { player.coins -= price; player.bandage++; ok = true; } break;
+            case 1: name = "Thuốc hồi máu"; price = 120; if (player.coins >= price) { player.coins -= price; player.draught++; ok = true; } break;
+            case 2: name = "Tre"; price = 20; if (player.coins >= price) { player.coins -= price; player.bamboo++; ok = true; } break;
+            case 3: name = "Thảo dược"; price = 20; if (player.coins >= price) { player.coins -= price; player.herb++; ok = true; } break;
+            case 4: name = "Quặng sắt"; price = 80; if (player.coins >= price) { player.coins -= price; player.iron++; ok = true; } break;
+            case 5: name = "Rèn kiếm +5 sát thương"; price = 600; if (player.coins >= price) { player.coins -= price; player.katanaLevel++; player.damage += 5; ok = true; } break;
+            default: name = ""; price = 0; break;
+        }
+        if (ok) {
+            if (audio != null) audio.play("coin");
+            saveGameQuiet();
+            setMessage("Đã mua: " + name + " (" + price + " vàng). Còn " + player.coins + " vàng.");
+        } else {
+            setMessage("Không đủ vàng! Cần " + price + " vàng, bạn có " + player.coins + " vàng.");
+        }
+    }
+
+    private void tryWhirlwind() {
+        if (!player.hasSkill("blade_4")) {
+            setMessage("Chưa học Cuồng Phong Trảm. Bấm O mở cây kỹ năng.");
             return;
         }
-        player.stamina -= 20;
+        if (whirlwindCooldown > 0 || player.stamina < 45) {
+            setMessage("Cuồng Phong Trảm chưa sẵn sàng (45 khí lực, hồi 12s).");
+            return;
+        }
+        player.stamina -= 45;
+        lastStaminaUse = gameTime;
+        whirlwindCooldown = 12;
+        if (audio != null) audio.play("swingHeavy");
+        spawnParticles(player.x, 1.0, player.y, Color.ORANGE, 24);
+        int base = player.damage + 20;
+        for (Enemy e : new ArrayList<>(level.enemies)) {
+            if (!e.alive()) continue;
+            if (Math.hypot(e.x - player.x, e.y - player.y) > 3.0) continue;
+            if (rng.nextDouble() < e.dodgeChance) continue;
+            boolean blocked = rng.nextDouble() < e.blockChance;
+            boolean crit = Combat.rollCrit(rng, player.critBonus);
+            int dmg = Combat.playerDamage(base, e.defense, crit, blocked, false);
+            e.hp -= dmg;
+            spawnParticles(e.x, 1.0, e.y, Color.ORANGE, 10);
+            if (e.hp <= 0) killEnemy(e);
+        }
+        setMessage("Cuồng Phong Trảm! Chém diện rộng quanh mình.");
+    }
+
+    private void tryWindstep() {
+        if (!player.hasSkill("wind_4")) {
+            setMessage("Chưa học Tốc Ảnh. Bấm O mở cây kỹ năng.");
+            return;
+        }
+        if (windstepCooldown > 0 || player.stamina < 30) {
+            setMessage("Tốc Ảnh chưa sẵn sàng (30 khí lực, hồi 9s).");
+            return;
+        }
+        player.stamina -= 30;
+        lastStaminaUse = gameTime;
+        windstepCooldown = 9;
+        player.windstepBonus = true;
+        if (audio != null) audio.play("dodge");
+        double dx = Math.cos(player.angle), dy = Math.sin(player.angle);
+        double nx = player.x + dx * 2.0, ny = player.y + dy * 2.0;
+        if (canMove(nx, player.y)) player.x = nx;
+        if (canMove(player.x, ny)) player.y = ny;
+        player.iframes = Math.max(player.iframes, 0.4);
+        setMessage("Tốc Ảnh! Lao về trước, đòn kế +80% sát thương.");
+    }
+
+    private void tryIronwill() {
+        if (!player.hasSkill("spirit_4")) {
+            setMessage("Chưa học Thân Bất Hoại. Bấm O mở cây kỹ năng.");
+            return;
+        }
+        if (ironwillCooldown > 0 || player.stamina < 25) {
+            setMessage("Thân Bất Hoại chưa sẵn sàng (25 khí lực, hồi 20s).");
+            return;
+        }
+        player.stamina -= 25;
+        lastStaminaUse = gameTime;
+        ironwillCooldown = 20;
+        player.ironwillTimer = 10;
+        if (audio != null) audio.play("unlock");
+        setMessage("Thân Bất Hoại! 10 giây sát thương nhận vào giảm một nửa.");
+    }
+
+    private void tryDodge() {
+        int cost = (int) Math.round(20 * (1 + player.staminaCostMul));
+        if (dodgeCooldown > 0 || player.stamina < cost) {
+            setMessage("Chưa né được: cần " + cost + " khí lực và chờ hồi chiêu.");
+            return;
+        }
+        player.stamina -= cost;
         lastStaminaUse = gameTime;
         if (audio != null) audio.play("dodge");
-        player.iframes = 0.4;
+        player.iframes = 0.4 + player.dodgeIframesBonus;
         dodgeCooldown = 0.8;
         double dx = Math.cos(player.angle), dy = Math.sin(player.angle);
         double nx = player.x + dx * 1.2, ny = player.y + dy * 1.2;
@@ -701,7 +859,7 @@ public class SamuraiScreen implements Screen {
         for (Sprite s : level.sprites) {
             if (s.type == Sprite.Type.SHRINE && Math.hypot(s.x - player.x, s.y - player.y) < 1.2) {
                 player.hp = player.maxHp;
-                player.stamina = 100;
+                player.stamina = player.maxStamina;
                 if (audio != null) audio.play("heal");
                 saveGame();
                 setMessage("Đài hồi sinh: hồi đầy máu và đã lưu game!");
@@ -731,16 +889,20 @@ public class SamuraiScreen implements Screen {
     // ---------- update ----------
 
     private void update(double dt) {
-        if (state != State.PLAYING || showInventory) return;
+        if (state != State.PLAYING || showInventory || showSkills || showShop) return;
         gameTime += dt;
         if (messageTimer > 0) messageTimer -= dt;
         if (damageFlash > 0) damageFlash -= dt;
         if (attackCooldown > 0) attackCooldown -= dt;
         if (skillCooldown > 0) skillCooldown -= dt;
         if (dodgeCooldown > 0) dodgeCooldown -= dt;
+        if (whirlwindCooldown > 0) whirlwindCooldown -= dt;
+        if (windstepCooldown > 0) windstepCooldown -= dt;
+        if (ironwillCooldown > 0) ironwillCooldown -= dt;
+        if (player.ironwillTimer > 0) player.ironwillTimer -= dt;
         if (player.iframes > 0) player.iframes -= dt;
-        if (gameTime - lastStaminaUse > 0.8 && player.stamina < 100) {
-            player.stamina = Math.min(100, player.stamina + 25 * dt);
+        if (gameTime - lastStaminaUse > 0.8 && player.stamina < player.maxStamina) {
+            player.stamina = Math.min(player.maxStamina, player.stamina + (25 + player.staminaRegenBonus) * dt);
         }
 
         if (attackTimer > 0) {
@@ -758,10 +920,10 @@ public class SamuraiScreen implements Screen {
         player.blocking = Gdx.input.isKeyPressed(Keys.L);
 
         boolean sprint = Gdx.input.isKeyPressed(Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Keys.SHIFT_RIGHT);
-        double speed = 3.0;
+        double speed = 3.0 * (1 + player.moveSpeedMul);
         if (sprint && player.stamina > 0) {
-            speed = 4.5;
-            player.stamina = Math.max(0, player.stamina - 15 * dt);
+            speed = 4.5 * (1 + player.moveSpeedMul);
+            player.stamina = Math.max(0, player.stamina - 15 * (1 + player.staminaCostMul) * dt);
             lastStaminaUse = gameTime;
         }
         if (Gdx.input.isKeyPressed(Keys.A) || Gdx.input.isKeyPressed(Keys.LEFT)) player.angle -= 2.4 * dt;
@@ -924,8 +1086,8 @@ public class SamuraiScreen implements Screen {
     }
 
     private void doEnemyAttack(Enemy e) {
-        boolean parry = player.blocking && (System.currentTimeMillis() - player.blockPressedAtMs < 250);
-        int dmg = Combat.enemyDamage(e.attack, player.blocking, player.iframes > 0, parry);
+        boolean parry = player.blocking && (System.currentTimeMillis() - player.blockPressedAtMs < 250 + player.parryWindowBonus * 1000);
+        int dmg = Combat.enemyDamage(e.attack, player.blocking, player.iframes > 0, parry, player.playerDefense, player.ironwillTimer > 0);
         if (parry) {
             e.state = Enemy.STUNNED;
             e.stunTimer = 1.5;
@@ -940,7 +1102,7 @@ public class SamuraiScreen implements Screen {
             return;
         }
         if (player.blocking) {
-            player.stamina = Math.max(0, player.stamina - 8);
+            player.stamina = Math.max(0, player.stamina - (int) Math.round(8 * (1 + player.staminaCostMul)));
             setMessage("Bạn đỡ đòn của " + e.name + " (-" + dmg + " máu).");
         } else if (dmg > 0) {
             setMessage(e.name + " chém bạn -" + dmg + " máu!");
@@ -963,8 +1125,8 @@ public class SamuraiScreen implements Screen {
                 continue;
             }
             if (Math.hypot(p.x - player.x, p.y - player.y) < 0.4) {
-                boolean parry = player.blocking && (System.currentTimeMillis() - player.blockPressedAtMs < 250);
-                int dmg = Combat.enemyDamage((int) p.damage, player.blocking, player.iframes > 0, parry);
+                boolean parry = player.blocking && (System.currentTimeMillis() - player.blockPressedAtMs < 250 + player.parryWindowBonus * 1000);
+                int dmg = Combat.enemyDamage((int) p.damage, player.blocking, player.iframes > 0, parry, player.playerDefense, player.ironwillTimer > 0);
                 if (player.iframes <= 0 && dmg > 0) {
                     player.hp -= dmg;
                     damageFlash = 0.4;
@@ -1047,8 +1209,37 @@ public class SamuraiScreen implements Screen {
             if (justPressed(Keys.ENTER) || justPressed(Keys.M)) state = State.MENU;
             return;
         }
+        // Skill / shop overlays pause the world, like the inventory.
+        if (showSkills) {
+            if (justPressed(Keys.O) || justPressed(Keys.ESCAPE)) showSkills = false;
+            else if (justPressed(Keys.UP) || justPressed(Keys.W)) skillSelection = (skillSelection + SkillTree.NODES.size() - 1) % SkillTree.NODES.size();
+            else if (justPressed(Keys.DOWN) || justPressed(Keys.S)) skillSelection = (skillSelection + 1) % SkillTree.NODES.size();
+            else if (justPressed(Keys.ENTER)) {
+                SkillTree.Node n = SkillTree.NODES.get(skillSelection);
+                if (SkillTree.canLearn(player, n)) {
+                    player.learnSkill(n.id, n.cost);
+                    if (audio != null) audio.play("unlock");
+                    saveGameQuiet();
+                    setMessage("Đã học: " + n.name + " (" + n.desc + ")");
+                } else if (player.hasSkill(n.id)) setMessage("Đã học kỹ năng này rồi.");
+                else setMessage("Chưa học được: cần " + n.cost + " điểm và kỹ năng yêu cầu trước đó.");
+            }
+            return;
+        }
+        if (showShop) {
+            if (justPressed(Keys.B) || justPressed(Keys.ESCAPE)) showShop = false;
+            else if (justPressed(Keys.UP) || justPressed(Keys.W)) shopSelection = (shopSelection + 6 - 1) % 6;
+            else if (justPressed(Keys.DOWN) || justPressed(Keys.S)) shopSelection = (shopSelection + 1) % 6;
+            else if (justPressed(Keys.ENTER)) buyShopItem(shopSelection);
+            return;
+        }
         // PLAYING (works even while the inventory is open, which pauses the world).
-        if (justPressed(Keys.J)) tryAttack(1);
+        if (justPressed(Keys.O)) { showSkills = true; skillSelection = 0; }
+        else if (justPressed(Keys.B)) { showShop = true; shopSelection = 0; }
+        else if (justPressed(Keys.Y)) tryWhirlwind();
+        else if (justPressed(Keys.T)) tryWindstep();
+        else if (justPressed(Keys.G)) tryIronwill();
+        else if (justPressed(Keys.J)) tryAttack(1);
         else if (justPressed(Keys.K)) tryAttack(2);
         else if (justPressed(Keys.U)) tryAttack(3);
         else if (justPressed(Keys.I)) tryDodge();
@@ -1091,6 +1282,21 @@ public class SamuraiScreen implements Screen {
 
         render3d();
         drawHud();
+        // Vignette + low HP pulse (post feel, without a custom shader).
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0, 0, 0, 0.18f);
+        shapes.rect(0, 0, W, 40);
+        shapes.rect(0, H - 40, W, 40);
+        shapes.rect(0, 0, 40, H);
+        shapes.rect(W - 40, 0, 40, H);
+        if (state == State.PLAYING && player.hp > 0 && player.hp < player.maxHp * 0.3) {
+            float pulse = 0.10f + (float) Math.abs(Math.sin(gameTime * 4)) * 0.10f;
+            shapes.setColor(1f, 0f, 0f, pulse);
+            shapes.rect(0, 0, W, H);
+        }
+        shapes.end();
+        if (showSkills) drawSkills();
+        if (showShop) drawShop();
         if (showInventory) drawInventory();
         if (state == State.PAUSED) drawOverlay("TẠM DỪNG", "Esc: tiếp tục  ·  M: về menu  ·  F5: lưu game");
         if (state == State.DEAD) drawOverlay("BẠN ĐÃ GỤC NGÃ", "R: chơi lại màn này  ·  M: về menu");
@@ -1311,6 +1517,31 @@ public class SamuraiScreen implements Screen {
         placePart(parts[9], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.12f);
         placePart(parts[10], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch, 0, 0, -0.5f, 0.05f);
         place(parts[11], (float) e.x, 0.02f, (float) e.y, 0, scale);
+        // Humanoid v2 details, following torso/head/leg transforms.
+        boolean armour = hasArmour(e);
+        // Chest plate only for armoured enemies/bosses, otherwise hidden by moving it underground.
+        float plateY = armour ? 1.18f * scale + yBase : -10f;
+        placePart(parts[12], (float) e.x, plateY, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, 0, 0.02f);
+        placePart(parts[13], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, -0.42f, 0.05f, 0, armLPitch, 0, 0, 0, 0);
+        placePart(parts[14], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0.05f, 0, armRPitch, 0, 0, 0, 0);
+        // Kimono collar V: two angled white strips on the chest.
+        placePart(parts[15], (float) e.x, 1.28f * scale + yBase, (float) e.y, yaw, scale, -0.10f, 0, 0.18f, lean, 16f, 0, 0, 0);
+        placePart(parts[16], (float) e.x, 1.28f * scale + yBase, (float) e.y, yaw, scale, 0.10f, 0, 0.18f, lean, -16f, 0, 0, 0);
+        placePart(parts[17], (float) e.x, 1.02f * scale + yBase, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, 0, 0);
+        placePart(parts[18], (float) e.x, 0.92f * scale + yBase, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, -0.05f, 0);
+        // Gaiters + sandals follow the legs.
+        placePart(parts[19], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, 0.16f, 0, 0, legSwing, 0, 0, -0.55f, 0);
+        placePart(parts[20], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, -0.16f, 0, 0, -legSwing, 0, 0, -0.55f, 0);
+        placePart(parts[21], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, 0.16f, 0, 0, legSwing, 0, 0, -0.72f, 0.05f);
+        placePart(parts[22], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, -0.16f, 0, 0, -legSwing, 0, 0, -0.72f, 0.05f);
+        // Face follows the head.
+        placePart(parts[23], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, -0.08f, 0.02f, 0.19f, headTilt, 0, 0, 0, 0);
+        placePart(parts[24], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, 0.08f, 0.02f, 0.19f, headTilt, 0, 0, 0, 0);
+        placePart(parts[25], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, 0, -0.03f, 0.20f, headTilt, 0, 0, 0, 0);
+        // Saya (scabbard) on the back, diagonal.
+        placePart(parts[26], (float) e.x, 1.20f * scale + yBase, (float) e.y, yaw, scale, -0.30f, 0, -0.22f, lean, -25f, 0, 0, 0);
+        // Hamon edge along the blade.
+        placePart(parts[27], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.13f);
         for (ModelInstance inst : parts) modelBatch.render(inst, environment);
         if (e.state == Enemy.WINDUP) {
             ModelInstance flash = new ModelInstance(boxSmallModel);
@@ -1409,7 +1640,7 @@ public class SamuraiScreen implements Screen {
         rectTop(110, 38, 200, 12, Color.DARK_GRAY);
         rectTop(110, 38, (int) (200 * Math.max(0, (double) player.hp / player.maxHp)), 12, Color.RED);
         rectTop(110, 58, 200, 12, Color.DARK_GRAY);
-        rectTop(110, 58, (int) (200 * player.stamina / 100), 12, Color.YELLOW);
+        rectTop(110, 58, (int) (200 * player.stamina / player.maxStamina), 12, Color.YELLOW);
         rectTop(8, 132, 430, 20 + level.objectives.size() * 16, new Color(0, 0, 0, 0.55f));
         Enemy boss = level.boss();
         if (boss != null) {
@@ -1422,7 +1653,7 @@ public class SamuraiScreen implements Screen {
         batch.begin();
         text(font, level.id + " - " + level.name, 18, 28);
         text(font, "Máu: " + player.hp + "/" + player.maxHp, 18, 48);
-        text(font, "Khí lực: " + (int) player.stamina, 18, 68);
+        text(font, "Khí lực: " + (int) player.stamina + "/" + player.maxStamina + " | Điểm kỹ năng: " + player.skillPoints + " (O) | Vàng: " + player.coins + " (B cửa hàng)", 18, 68);
         text(font, "Cấp " + player.level + " | XP " + player.xp + "/" + player.xpNext
                 + " | Vàng " + player.coins + " | Sát thương " + player.damage + " | Kiếm cấp " + player.katanaLevel, 18, 88);
         text(font, "Nhiệm vụ:", 18, 108);
@@ -1440,7 +1671,7 @@ public class SamuraiScreen implements Screen {
             textCentered(font, message, H - 42);
             font.setColor(Color.WHITE);
         }
-        text(font, "W/S di chuyển · A/D xoay · Q/E lách · Shift chạy nhanh · J đánh nhẹ · K đánh mạnh · U Nhất Đao Trảm · L đỡ (đúng lúc = Parry) · I né · F đài hồi sinh · 1/2 dùng thuốc · C chế tạo · Tab túi đồ · Esc tạm dừng · F5 lưu · F6 nhạc", 12, H - 16);
+        text(font, "W/S di chuyển · A/D xoay · Q/E lách · Shift chạy nhanh · J đánh nhẹ · K đánh mạnh · U Nhất Đao Trảm · Y Cuồng Phong · T Tốc Ảnh · G Thân Bất Hoại · L đỡ (đúng lúc = Parry) · I né · F đài hồi sinh · 1/2 dùng thuốc · C chế tạo · Tab túi đồ · O kỹ năng · B cửa hàng · Esc tạm dừng · F5 lưu · F6 nhạc", 12, H - 16);
         batch.end();
     }
 
@@ -1471,6 +1702,49 @@ public class SamuraiScreen implements Screen {
         }
         shapes.setColor(Color.YELLOW);
         shapes.circle(x0 + (int) player.x * cell, H - y0 - (int) player.y * cell - cell + 1, 3);
+    }
+
+    private void drawSkills() {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0, 0, 0, 0.75f);
+        shapes.rect(60, 60, W - 120, H - 120);
+        shapes.end();
+        batch.begin();
+        textCentered(bigFont, "CÂY KỸ NĂNG", 90);
+        text(font, "Điểm kỹ năng: " + player.skillPoints + "  |  W/S hoặc ↑/↓ chọn, Enter học, O/Esc đóng", 80, 130);
+        int y = 160;
+        for (int i = 0; i < SkillTree.NODES.size(); i++) {
+            SkillTree.Node n = SkillTree.NODES.get(i);
+            String mark = player.hasSkill(n.id) ? "[x]" : SkillTree.canLearn(player, n) ? "[ ]" : "[-]";
+            String sel = (i == skillSelection) ? ">> " : "   ";
+            String line = sel + mark + " [" + n.branch + " T" + n.tier + "] " + n.name + " (" + n.cost + " điểm) - " + n.desc;
+            if (i == skillSelection) {
+                // Highlight is via the >> marker; keep text simple for the bitmap font.
+            }
+            text(font, line, 80, y);
+            y += 24;
+        }
+        text(font, "Kỹ năng chủ động mới: Y Cuồng Phong Trảm, T Tốc Ảnh, G Thân Bất Hoại (cần học trước).", 80, y + 10);
+        batch.end();
+    }
+
+    private void drawShop() {
+        String[] names = {"Băng gạc", "Thuốc hồi máu", "Tre", "Thảo dược", "Quặng sắt", "Rèn kiếm +5 sát thương"};
+        int[] prices = {50, 120, 20, 20, 80, 600};
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0, 0, 0, 0.75f);
+        shapes.rect(140, 140, W - 280, H - 280);
+        shapes.end();
+        batch.begin();
+        textCentered(bigFont, "CỬA HÀNG", 170);
+        text(font, "Vàng của bạn: " + player.coins + "  |  W/S hoặc ↑/↓ chọn, Enter mua, B/Esc đóng", 160, 210);
+        int y = 240;
+        for (int i = 0; i < names.length; i++) {
+            String sel = (i == shopSelection) ? ">> " : "   ";
+            text(font, sel + names[i] + " - " + prices[i] + " vàng", 160, y);
+            y += 28;
+        }
+        batch.end();
     }
 
     private void drawInventory() {

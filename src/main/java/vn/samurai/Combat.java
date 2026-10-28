@@ -18,12 +18,24 @@ public final class Combat {
 
     /** Enemy damage to the player. Dodging and a perfect parry avoid it completely. */
     public static int enemyDamage(int enemyAttack, boolean blocking, boolean dodging, boolean parry) {
+        return enemyDamage(enemyAttack, blocking, dodging, parry, 0, false);
+    }
+
+    /** With player defence and Ironwill (halved damage while active). */
+    public static int enemyDamage(int enemyAttack, boolean blocking, boolean dodging, boolean parry,
+                                  int playerDefense, boolean ironwill) {
         if (dodging || parry) return 0;
-        if (blocking) return Math.max(1, enemyAttack / 10);
-        return enemyAttack;
+        int eff = Math.max(1, enemyAttack - playerDefense);
+        if (ironwill) eff = Math.max(1, eff / 2);
+        if (blocking) return Math.max(1, eff / 10);
+        return eff;
     }
 
     public static boolean rollCrit(Random rng) {
-        return rng.nextDouble() < 0.10;
+        return rollCrit(rng, 0);
+    }
+
+    public static boolean rollCrit(Random rng, int bonusPct) {
+        return rng.nextDouble() < (0.10 + bonusPct / 100.0);
     }
 }
