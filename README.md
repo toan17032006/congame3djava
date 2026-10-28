@@ -3,8 +3,14 @@
 Game samurai hành động góc nhìn thứ nhất, viết bằng **Java + LibGDX 1.12.1 (backend LWJGL3)**.
 Đồ họa 3D trong bản này là **3D thật**: camera phối cảnh góc nhìn thứ nhất
 (`PerspectiveCamera`), tường, cây, cổng Torii, đài hồi sinh, địch và vật phẩm đều là
-mô hình 3D (hộp, nón, cầu) vẽ bằng `ModelBatch`, có ánh sáng môi trường và ánh sáng
-hướng, có head-bob khi di chuyển và bản đồ mini góc phải trên.
+mô hình 3D vẽ bằng `ModelBatch`, có ánh sáng môi trường và ánh sáng hướng, có
+head-bob khi di chuyển và bản đồ mini góc phải trên. Theo đúng hướng của bản web
+Three.js gốc (vốn cũng dùng đồ họa procedural, không dùng file ảnh/âm thanh ngoài),
+bản này thêm: **texture procedural** (đá, đất, cỏ, gỗ, vải dệt, kim loại),
+**rig humanoid chi tiết với animation** (đi, đứng thở, giơ kiếm, chém, choáng, ngã,
+kiếm góc nhìn thứ nhất, hạt văng khi trúng đòn, cỏ lay động, mặt trời/mây/sao),
+và **nhạc nền + hiệu ứng âm thanh tổng hợp** (koto pentatonic, trống taiko, gió,
+tiếng chém/đỡ/parry/nhặt đồ…). Không cần file ảnh hay file nhạc ngoài nào.
 
 > Lịch sử của repo: trước đây repo là game web Three.js + server Python (15 màn, 5 boss,
 > cây kỹ năng, phe phái, cửa hàng…). Sau đó repo được viết lại thành game Java thuần Swing
@@ -72,6 +78,7 @@ Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy l�
 | Tab | Mở / đóng túi đồ (game tạm dừng khi mở túi đồ) |
 | Esc | Tạm dừng / tiếp tục |
 | F5 | Lưu game ngay lập tức |
+| F6 | Bật / tắt nhạc nền và tiếng gió |
 | N | Sang màn tiếp (chỉ ở màn hình hoàn thành màn) |
 | R | Chơi lại màn (chỉ ở màn hình gục ngã) |
 | M | Về menu (ở màn tạm dừng, gục ngã, hoàn thành màn, chiến thắng) |
@@ -95,11 +102,16 @@ Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy l�
 ### 5.1. Di chuyển, góc nhìn và bản đồ
 
 - **Góc nhìn thứ nhất 3D thật (LibGDX)**: camera phối cảnh 67 độ đặt ở độ cao 1,6 ô,
-  nhìn theo hướng người chơi. Tường là khối hộp, cây là khối nón, cổng Torii là 2 cột
-  + 2 xà đỏ, đài hồi sinh là khối đá + quả cầu sáng, địch là mô hình người (thân hộp,
-  đầu cầu, kiếm hộp) quay mặt về phía người chơi, đạn là quả cầu bay. Ánh sáng gồm
-  ánh sáng môi trường + ánh sáng hướng, nên mặt sáng/mặt tối của khối 3D khác nhau
-  theo hướng. Khi di chuyển, camera có head-bob nhẹ cho cảm giác bước đi.
+  nhìn theo hướng người chơi. Tường là khối hộp có texture đá (gạch + vân),
+  cây có thân gỗ + tán nón texture lá, mặt đất mỗi ô có texture đất + cỏ,
+  cổng Torii là 2 cột + 2 xà gỗ đỏ, đài hồi sinh là khối đá + quả cầu sáng,
+  địch là rig humanoid chi tiết (xem 5.2b), đạn là quả cầu bay.
+  Ánh sáng gồm ánh sáng môi trường + ánh sáng hướng, nên mặt sáng/mặt tối của
+  khối 3D khác nhau theo hướng. Khi di chuyển, camera có head-bob nhẹ.
+- **Bầu trời**: mặt trời, 8 đám mây trôi quanh người chơi, và sao (chỉ ở các màn
+  tối như Mạc Phủ Bóng Tối) — tương tự sky gradient + mây + sao của bản web.
+- **Cỏ lay động**: cỏ mọc ngẫu nhiên trên các ô sàn, đung đưa theo gió
+  (sin theo thời gian, mỗi bụi cỏ lệch pha khác nhau).
 - **Va chạm**: người chơi và địch không đi xuyên tường. Di chuyển thử theo từng trục X rồi Y,
   nên khi đi chéo vào góc tường sẽ trượt dọc tường thay vì bị kẹt.
 - **Bản đồ mini (góc phải trên)**: tường trắng, cây xanh lá, người chơi là chấm vàng,
@@ -128,6 +140,46 @@ Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy l�
 - **Vết chém trên màn hình**: khi đánh, màn hình hiện vòng cung kiếm ở giữa;
   khi bị thương, màn hình chớp đỏ. Bản LibGDX không dùng tiếng bíp của AWT nữa,
   vì game không còn phụ thuộc vào AWT.
+
+### 5.2b. Animation humanoid chi tiết (như bản web)
+
+Rig địch gồm: thân kimono (texture vải, màu theo loại địch), đai obi đỏ, đầu,
+tóc + búi tóc samurai (topknot), 2 tay, 2 chân, kiếm (lưỡi kim loại + chắn tay),
+và bóng đổ tròn dưới chân. Boss có thêm hào quang đỏ nhấp nháy khi nổi giận
+(dưới 30% máu).
+
+- **Đứng yên (Idle)**: thở nhẹ (thân nhún theo sin), tay đung đưa nhẹ, đầu hơi nghiêng.
+- **Đi đuổi (Chase)**: chân trái/phải vung ngược pha nhau, tay vung ngược với chân,
+  thân nhún theo nhịp bước, giống clip walk 0,95 giây của bản web.
+- **Giơ kiếm (Windup, 0,5 giây)**: tay phải giơ kiếm lên cao ra sau, thân ngả ra sau,
+  kèm viền đỏ nhấp nháy — đây là báo trước đòn đánh, như bản web.
+- **Chém (Cooldown)**: tay phải quạt kiếm xuống rồi trở về tư thế nghỉ theo thời gian
+  hồi chiêu.
+- **Choáng (Stun, sau parry)**: thân ngả ra sau, đầu ngả, tay dang ra, rung nhẹ.
+- **Ngã chết**: trong 0,8 giây sau khi hạ, địch ngã ngửa ra đất rồi mới biến mất,
+  kèm hạt văng.
+- **Kiếm góc nhìn thứ nhất của bạn**: katana hiện ở góc dưới phải màn hình, nhún
+  theo bước chân, vung lên/chém xuống khi bạn bấm J/K/U, và đưa ra giữa dựng đứng
+  khi bạn giữ L để đỡ.
+- **Hạt văng (particles)**: khi trúng đòn, nhặt đồ, hạ địch, parry, qua màn… sẽ có
+  các hạt cầu nhỏ bay ra, rơi xuống theo trọng lực và nhỏ dần rồi biến mất.
+
+### 5.2c. Nhạc nền và âm thanh (tổng hợp, như bản web)
+
+Bản web gốc không dùng file nhạc nào mà tổng hợp bằng WebAudio. Bản LibGDX làm
+tương tự bằng Java: lần chạy đầu tiên game tự tạo các file WAV trong thư mục
+`audio/` (đã có trong `.gitignore`, không commit lên repo), rồi phát bằng LibGDX.
+
+- **Nhạc nền**: vòng lặp 23,2 giây, thang pentatonic D
+  [220, 247,5, 293,33, 329,63, 392, 440, 493,88 Hz], tiếng đàn koto (triangle +
+  harmonic sine, decay dài), mỗi 1,45 giây một nốt, bass mỗi 4 nốt, trống taiko
+  (sine 90 → 40 Hz) mỗi 2 nốt. Bấm **F6** để bật/tắt nhạc nền (và cả tiếng gió).
+- **Tiếng gió nền**: nhiễu lọc thấp ~380 Hz, vòng lặp 6 giây, biên độ lên xuống
+  chậm theo LFO 0,13 Hz như bản web.
+- **Hiệu ứng (SFX)**: chém nhẹ/nặng, trúng đòn nhẹ/nặng, đỡ, parry, clang,
+  né, bước chân (mỗi 0,4 giây khi di chuyển), nhặt đồ, vàng, lên cấp, nhiệm vụ,
+  chết, boss gầm, tên, lửa, thud, hồi máu, qua cổng, bấm menu, chế tạo, mở khóa.
+  Nếu máy không có thiết bị âm thanh, game vẫn chạy bình thường nhưng không có tiếng.
 
 ### 5.3. Địch và AI
 
@@ -247,8 +299,11 @@ src/main/java/vn/samurai/
 ├── gdx/
 │   ├── DesktopLauncher.java    # Mở cửa sổ LibGDX/LWJGL3 1024×640, 60 FPS
 │   ├── SamuraiGame.java        # Application LibGDX, chỉ giữ một Screen là SamuraiScreen
-│   └── SamuraiScreen.java      # Vòng lặp game, camera 3D, ModelBatch, HUD/minimap, input,
-│   │                           # AI địch, đạn, boss pha, tiếng Việt (font DejaVu qua FreeType)
+│   ├── SamuraiScreen.java      # Vòng lặp game, camera 3D, ModelBatch, HUD/minimap, input,
+│   │                           # AI địch, đạn, boss pha, rig humanoid, hạt, bầu trời, kiếm FPS,
+│   │                           # tiếng Việt (font DejaVu qua FreeType)
+│   ├── TextureFactory.java     # Texture procedural bằng Pixmap: đá, đất, cỏ, gỗ, vải, kim loại
+│   └── AudioManager.java       # Tổng hợp WAV: nhạc koto/taiko, gió, 23 SFX; phát bằng LibGDX
 ├── Levels.java     # Dữ liệu 8 chương: bản đồ dạng lưới ký tự, nhiệm vụ, thưởng, màu trời/sàn
 ├── Level.java      # Một chương: đọc bản đồ, tường/cây, tầm nhìn, mục tiêu, boss còn sống
 ├── Enemy.java      # Dữ liệu địch và boss: máu, tấn công, giáp, tốc độ, tầm nhìn, tỉ lệ đỡ/né
@@ -269,10 +324,10 @@ Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn �
 
 ## 7. Giới hạn đã biết (minh bạch)
 
-- Đồ họa đã là 3D thật, nhưng mô hình vẫn là hình khối hình học cơ bản (hộp, nón, cầu),
-  chưa phải mô hình nhân vật low-poly chi tiết, chưa có texture, chưa có animation
-  đi/chém của nhân vật như bản web Three.js.
-- Không có âm nhạc nền và hiệu ứng âm thanh đầy đủ.
+- Đồ họa đã là 3D thật với texture, rig và animation, nhưng mô hình vẫn là hình khối
+  hình học cơ bản (hộp, nón, cầu) với các chi tiết lắp ghép, chưa phải mô hình nhân vật
+  low-poly với skeletal animation và shader PBR đầy đủ như bản web Three.js, chưa có
+  texture normal-map, bloom/post-processing, hay cỏ instanced hàng nghìn bụi như bản web.
 - Không có multiplayer, không có server, không có cửa hàng mua bán, không có cây kỹ năng
   15 node và hệ phe phái đầy đủ như bản web. Kỹ năng trong bản Java chỉ có Nhất Đao Trảm (U).
 - Không có nhảy (Space) và đổi góc nhìn thứ nhất/thứ ba như bản web; bản LibGDX chỉ có

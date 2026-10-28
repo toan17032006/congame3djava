@@ -1,6 +1,7 @@
 out/
 build/
 .gradle/
+audio/
 *.class
 samurai_save.txt
 .DS_Store
