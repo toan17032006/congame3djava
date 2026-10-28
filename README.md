@@ -19,97 +19,187 @@ tiếng chém/đỡ/parry/nhặt đồ…). Không cần file ảnh hay file nh�
 > của bản Swing, chỉ thay phần hiển thị và input bằng LibGDX. Bản Swing cũ vẫn còn trong
 > lịch sử git ở commit `80555ad`, bản web gốc còn ở commit `ec46715`, nếu bạn muốn xem lại.
 
-## 0. Cách chạy nhanh nhất (đọc trước khi chạy)
+## 0. Cách chạy (bản đầy đủ và mới nhất — đọc mục này là đủ)
 
-### Windows (cách dễ nhất: nhấp đúp)
+Mục này là hướng dẫn chạy duy nhất và mới nhất. Các mục 1 và 2 phía dưới chỉ
+tóm tắt lại và trỏ về đây, để không còn 3 bản hướng dẫn khác nhau gây nhầm lẫn.
 
-1. **Cài JDK 17 trở lên** nếu máy chưa có. Tải Temurin miễn phí tại
-   https://adoptium.net/ , chọn JDK 17 (hoặc mới hơn), cài đặt bình thường.
-   Kiểm tra bằng cách mở PowerShell và gõ `java -version` — phải hiện
-   `17` trở lên, không được báo lỗi.
-2. **Tải game về máy** bằng một trong hai cách:
-   - Dùng git: mở PowerShell, gõ
-     `git clone https://github.com/toan17032006/congame3djava.git`
-   - Không dùng git: vào trang GitHub của repo, bấm nút xanh **Code** →
-     **Download ZIP**, giải nén ra một thư mục.
-3. **Vào thư mục game** (thư mục chứa file `run.bat` và `gradlew.bat`),
-   **nhấp đúp file `run.bat`**. Cửa sổ game sẽ mở sau khi tải xong.
-   - Nếu thích gõ lệnh thay vì nhấp đúp: mở PowerShell **tại thư mục game**
-     (gõ `cd` tới thư mục đó, hoặc Shift + chuột phải → Open PowerShell here),
-     rồi gõ `.\run.bat` hoặc `.\gradlew.bat run`.
-   - **Lần đầu tiên** cần mạng và có thể mất vài phút vì Gradle sẽ tải
-     Gradle 8.5 và LibGDX 1.12.1 về máy. Đừng tắt cửa sổ trong lúc tải.
-     Các lần sau chạy nhanh hơn vì đã có cache.
-4. Ở menu chính: **Enter** chơi mới, **L** tiếp tục từ file lưu (nếu có),
-   **Esc** thoát game.
+### 0.1. Cần có gì trước khi chạy
 
-### Linux / macOS
+- **JDK 17 trở lên** (đã kiểm tra với JDK 17.0.21). Không cần cài Gradle trước:
+  repo đã có sẵn Gradle Wrapper 8.5 (`gradlew` / `gradlew.bat`).
+- **Mạng internet cho lần chạy đầu tiên** để tải Gradle 8.5 và LibGDX 1.12.1
+  (gdx, gdx-backend-lwjgl3, gdx-freetype và LWJGL) từ Maven Central.
+  Sau lần đầu, game thường chạy offline được từ cache Gradle.
+- Máy Windows, Linux hoặc macOS, màn hình từ 1024×640 trở lên (cửa sổ game
+  cố định 1024×640, không co giãn).
 
-1. Cài JDK 17 trở lên (ví dụ: `sudo apt install openjdk-17-jdk` trên Ubuntu,
-   hoặc Temurin tại https://adoptium.net/ ).
-2. Tải game như trên (`git clone` hoặc Download ZIP rồi giải nén).
+### 0.2. Windows — cách dễ nhất: nhấp đúp `run.bat`
+
+**Bước 1 — Cài JDK 17+ (chỉ làm một lần, bỏ qua nếu máy đã có)**
+
+1. Tải Temurin miễn phí tại https://adoptium.net/ , chọn JDK 17 (hoặc mới hơn).
+2. Khi cài đặt, để nguyên các ô đã tick sẵn, đặc biệt là **Set JAVA_HOME**
+   và **Add to PATH** (nếu bỏ tick 2 ô này, máy sẽ vẫn báo không tìm thấy Java
+   dù đã cài xong).
+3. Cài xong, **đóng hết cửa sổ PowerShell / Command Prompt đang mở rồi mở lại**,
+   gõ:
+   ```powershell
+   java -version
+   ```
+   Phải hiện dạng `openjdk 17.0.x` trở lên (ví dụ `openjdk 17.0.21`).
+   Nếu hiện `1.8.x` (Java 8) hoặc `11.x`, tức là máy bạn vẫn đang dùng Java cũ
+   đứng trước trong PATH — gỡ Java cũ đi, hoặc cài lại Temurin và tick lại
+   2 ô ở trên, rồi mở lại cửa sổ lệnh.
+
+**Bước 2 — Tải game về máy (chọn 1 trong 2 cách)**
+
+- Cách dùng git (khuyến khích, để sau này cập nhật dễ):
+  ```powershell
+  git clone https://github.com/toan17032006/congame3djava.git
+  cd congame3djava
+  ```
+  Lưu ý bước `cd congame3djava` — sau khi clone xong bạn đang đứng ở thư mục
+  cha, chưa phải thư mục game. Quên bước này là nguyên nhân hay gặp nhất
+  của lỗi “không tìm thấy file `gradlew.bat`”.
+- Cách không dùng git: vào trang GitHub của repo, bấm nút xanh **Code** →
+  **Download ZIP**, giải nén. Sau khi giải nén sẽ có thư mục
+  `congame3djava-main` — **đó chính là thư mục game**, mở nó ra, bên trong
+  phải thấy `run.bat`, `gradlew.bat` và `README.md`.
+
+**Bước 3 — Chạy game**
+
+- Cách dễ nhất: **nhấp đúp file `run.bat`** trong thư mục game.
+  `run.bat` sẽ kiểm tra Java trước, rồi gọi `gradlew.bat run`. Nếu game
+  thoát vì lỗi, cửa sổ sẽ dừng lại (pause) để bạn đọc được lỗi, thay vì
+  tự đóng ngay.
+- Cách gõ lệnh (tương đương, dùng khi bạn thích dùng PowerShell):
+  mở PowerShell **tại thư mục game** (gõ `cd` tới thư mục đó, hoặc
+  Shift + chuột phải vào thư mục game → Open PowerShell here), rồi gõ:
+  ```powershell
+  .\gradlew.bat run
+  ```
+  hoặc `.\run.bat` (giống nhấp đúp, nhưng chạy trong PowerShell).
+- Trên Windows, **đừng chạy `./run.sh`** — đó là script cho Linux/macOS,
+  PowerShell không chạy được file `.sh`.
+
+**Bước 4 — Vào game**
+
+- Lần đầu, cửa sổ lệnh sẽ hiện `Downloading https://services.gradle.org/...`
+  rồi `> Task :run`, sau đó cửa sổ game mới mở. Đừng tắt cửa sổ lệnh trong
+  lúc tải.
+- Ở menu chính: **Enter** chơi mới từ chương 1, **L** tiếp tục từ file lưu
+  (nếu có), **Esc** thoát game.
+- **Nhớ bấm F5 để lưu trước khi thoát.** Game chỉ lưu khi bạn bấm F5, khi
+  dùng đài hồi sinh, hoặc khi qua màn — đóng cửa sổ game không tự lưu,
+  tiến trình từ lần lưu cuối sẽ mất.
+
+### 0.3. Linux / macOS
+
+1. Cài JDK 17 trở lên, ví dụ trên Ubuntu:
+   ```bash
+   sudo apt install openjdk-17-jdk
+   ```
+   hoặc tải Temurin tại https://adoptium.net/ . Kiểm tra bằng `java -version`,
+   phải hiện `17` trở lên.
+2. Tải game như mục 0.2 bước 2 (`git clone` rồi `cd congame3djava`,
+   hoặc Download ZIP rồi giải nén và mở thư mục `congame3djava-main`).
 3. Vào thư mục game, gõ:
    ```bash
-   chmod +x run.sh
+   chmod +x run.sh gradlew
    ./run.sh
    ```
-   hoặc trực tiếp `./gradlew run`.
+   Lệnh `chmod +x` chỉ cần làm một lần, và đặc biệt cần nếu bạn tải bằng
+   Download ZIP (ZIP thường làm mất quyền thực thi của file). Cách khác,
+   tương đương:
+   ```bash
+   ./gradlew run
+   ```
+4. Vào menu và lưu game giống mục 0.2 bước 4 (Enter chơi mới, L tiếp tục,
+   Esc thoát, **F5 để lưu trước khi thoát**).
 
-### Nếu gặp lỗi
+### 0.4. Lần đầu chạy sẽ xảy ra những gì (đừng hoảng)
+
+1. Gradle Wrapper tải Gradle 8.5 về máy (lưu ở thư mục `.gradle` trong
+   thư mục người dùng, không phải trong thư mục game).
+2. Gradle tải LibGDX 1.12.1 và các thư viện LWJGL về cache, rồi biên dịch game.
+3. Game mở cửa sổ, tạo nhạc nền và hiệu ứng âm thanh lần đầu (khoảng 25 file
+   WAV, lưu vào thư mục `audio/` trong thư mục game), tải font tiếng Việt.
+   Vì vậy **lần đầu cửa sổ game có thể đen vài giây rồi mới hiện menu** —
+   đó là bình thường, chờ thêm, đừng tắt.
+4. Các lần sau: Gradle dùng lại cache nên game mở nhanh hơn nhiều, và
+   thường chạy được cả khi không có mạng.
+
+### 0.5. File lưu và thư mục nhạc ở đâu
+
+- **File lưu: `samurai_save.txt`, nằm ngay trong thư mục game**
+  (thư mục chứa `run.bat` / `gradlew.bat`), vì khi bạn chạy đúng như hướng dẫn
+  (đã `cd` vào thư mục game trước), Gradle chạy game với thư mục game làm
+  thư mục làm việc.
+  File này và thư mục `audio/` đều đã có trong `.gitignore`, nên khi bạn
+  `git pull` hoặc commit thì chúng không bị ghi đè hay đưa lên GitHub.
+- **Nhạc: thư mục `audio/` trong thư mục game.** Xóa thư mục này cũng không
+  sao — lần chạy sau game sẽ tự tạo lại, chỉ là lần đó sẽ đen màn hình
+  lâu hơn một chút.
+- **Sao lưu tiến trình:** chỉ cần copy file `samurai_save.txt` sang chỗ khác
+  là đủ. Khi cập nhật game (xem mục 0.6), nhớ giữ lại file này.
+
+### 0.6. Cập nhật game lên bản mới
+
+- Nếu bạn tải bằng git: vào thư mục game, gõ `git pull`. File lưu
+  `samurai_save.txt` không bị ghi đè vì nó đã được git bỏ qua.
+  Nếu `git pull` báo xung đột vì bạn đã sửa file trong repo, hãy sao lưu
+  `samurai_save.txt` trước, rồi tải lại repo sạch và copy file lưu vào.
+- Nếu bạn tải bằng Download ZIP: tải ZIP mới, giải nén ra thư mục mới,
+  **copy file `samurai_save.txt` từ thư mục game cũ sang thư mục game mới**
+  trước khi xóa thư mục cũ — nếu không, bạn sẽ phải chơi lại từ đầu
+  (bấm L ở menu sẽ báo không tìm thấy file lưu).
+- Sau khi cập nhật, chạy lại như mục 0.2 hoặc 0.3. File lưu cũ vẫn tải được
+  (các tính năng mới như kỹ năng, NPC, sóng/phòng thủ sẽ dùng giá trị mặc định
+  nếu file lưu cũ chưa có chúng).
+
+### 0.7. Nếu gặp lỗi
 
 | Lỗi / hiện tượng | Cách sửa |
 | --- | --- |
-| `java` is not recognized / không tìm thấy Java | Chưa cài JDK, hoặc cài xong chưa mở lại PowerShell. Cài JDK 17+ rồi mở lại cửa sổ lệnh và gõ `java -version` để kiểm tra. |
-| `gradlew` is not recognized / không tìm thấy file | Bạn đang đứng sai thư mục. Phải đứng ở thư mục gốc của repo (thư mục chứa `run.bat`, `gradlew.bat`, `README.md`), không phải trong `src` hay trong thư mục con khác. |
-| Tải Gradle/LibGDX rất lâu, hoặc báo lỗi mạng | Lần đầu cần mạng. Kiểm tra mạng, chờ thêm, rồi chạy lại lệnh — Gradle sẽ tiếp tục từ chỗ đã tải, không tải lại từ đầu. |
-| Cửa sổ game đen một lúc rồi mới hiện menu | Bình thường ở lần đầu: game đang tạo nhạc và tải font. Chờ vài giây, đừng tắt. |
-| Cảnh báo ALSA / không có tiếng | Chỉ xảy ra trên máy không có card âm thanh (ví dụ máy ảo). Trên máy Windows bình thường sẽ có tiếng, bấm **F6** để bật/tắt nhạc. |
-| Không thấy file lưu cũ | File lưu là `samurai_save.txt`, nằm trong cùng thư mục bạn chạy game (thư mục làm việc khi gõ lệnh). Nếu bạn chạy từ thư mục khác, game sẽ không thấy file lưu cũ. Hãy chạy từ thư mục gốc của repo. |
-| Lỗi cũ `vn.samurai.Main` không tìm thấy | Đó là lệnh của bản Swing cũ, đã bỏ. Bản hiện tại chạy bằng Gradle, class chính là `vn.samurai.gdx.DesktopLauncher`, bạn không cần gõ `java` thủ công. |
+| `java` is not recognized / không tìm thấy Java, hoặc `run.bat` báo `[LOI] Khong tim thay Java` | Chưa cài JDK, hoặc cài xong chưa mở lại cửa sổ lệnh, hoặc lúc cài đã bỏ tick Set JAVA_HOME / Add to PATH. Cài lại Temurin JDK 17+, tick lại 2 ô đó, đóng hết cửa sổ lệnh rồi mở lại, gõ `java -version` để kiểm tra. |
+| `java -version` hiện `1.8.x` hoặc `11.x` | Máy đang dùng Java cũ đứng trước trong PATH. Gỡ Java cũ đi, hoặc cài lại Temurin và đảm bảo nó đứng trước trong PATH, rồi mở lại cửa sổ lệnh. Game cần JDK 17+. |
+| `gradlew` is not recognized / không tìm thấy file | Bạn đang đứng sai thư mục. Phải đứng ở thư mục game (thư mục chứa `run.bat`, `gradlew.bat`, `README.md`). Sau `git clone` phải gõ thêm `cd congame3djava`. Sau Download ZIP phải mở thư mục `congame3djava-main`, không phải thư mục cha chứa nó. |
+| `Permission denied` khi chạy `./gradlew run` hoặc `./run.sh` (Linux/macOS) | Gõ `chmod +x run.sh gradlew` một lần rồi chạy lại. Lỗi này hay gặp khi tải bằng Download ZIP. |
+| Tải Gradle/LibGDX rất lâu, hoặc báo lỗi mạng / SSL | Lần đầu cần mạng. Kiểm tra mạng, chờ thêm, rồi chạy lại lệnh — Gradle sẽ tiếp tục từ chỗ đã tải, không tải lại từ đầu. Trên Windows, nếu hiện hộp thoại Windows Firewall hỏi có cho Java qua mạng không, bấm **Allow**. Nếu bạn đang ở mạng trường/công ty chặn tải file, thử mạng nhà hoặc phát hotspot điện thoại. |
+| Gradle báo `Unable to start the daemon` hoặc daemon lỗi | Thử gõ `gradlew.bat --stop` (Windows) hoặc `./gradlew --stop` (Linux/macOS), rồi chạy lại `gradlew.bat run` / `./gradlew run`. Nếu vẫn lỗi, thử thêm `--no-daemon`: `gradlew.bat run --no-daemon`. |
+| Cửa sổ game đen một lúc rồi mới hiện menu | Bình thường ở lần đầu: game đang tạo nhạc và tải font (xem mục 0.4). Chờ vài giây, đừng tắt. Nếu đen quá 1–2 phút mà không hiện menu, xem lỗi ở cửa sổ lệnh. |
+| Cửa sổ game mở rồi đóng ngay, hoặc Gradle báo `BUILD FAILED` | Đọc dòng lỗi cuối cùng ở cửa sổ lệnh (với `run.bat`, cửa sổ sẽ dừng lại để bạn đọc). Nguyên nhân hay gặp nhất: sai phiên bản Java, đứng sai thư mục, hoặc card đồ họa quá cũ (xem dòng dưới). |
+| `Failed to create GLFW window` / lỗi OpenGL | Card đồ họa hoặc driver quá cũ, hoặc máy ảo không có GPU. Cập nhật driver card đồ họa từ trang của hãng (Intel/NVIDIA/AMD) hoặc qua Windows Update, rồi chạy lại. Trên máy ảo không có GPU, game có thể không mở được cửa sổ — đây là giới hạn của máy ảo, không phải lỗi game. |
+| Cảnh báo ALSA / không có tiếng | Chỉ xảy ra trên máy không có card âm thanh (ví dụ máy ảo). Trên máy Windows bình thường sẽ có tiếng, bấm **F6** để bật/tắt nhạc. Kiểm tra âm lượng Windows và loa/tai nghe trước. |
+| Bấm L ở menu mà không tiếp tục được, hoặc “không thấy file lưu cũ” | Chưa có file lưu, hoặc file lưu không nằm trong thư mục game hiện tại. File lưu phải là `samurai_save.txt` ngay trong thư mục game (xem mục 0.5). Nếu bạn vừa tải ZIP mới sang thư mục mới, copy file lưu từ thư mục cũ sang. Nhớ rằng game chỉ tạo file lưu khi bạn bấm F5, dùng đài hồi sinh, hoặc qua màn. |
+| Thoát game rồi mở lại thì mất tiến trình | Bạn đã đóng game mà chưa lưu. Lần sau nhớ **bấm F5 trước khi thoát**. Game không tự lưu khi đóng cửa sổ. |
+| Lệnh cũ `vn.samurai.Main` không tìm thấy, hoặc `java -cp out ...` báo lỗi | Đó là lệnh của bản Swing cũ, đã bỏ. Bản hiện tại chạy bằng Gradle, class chính là `vn.samurai.gdx.DesktopLauncher`, bạn không cần gõ `java` thủ công. Chỉ dùng `run.bat` / `gradlew.bat run` (Windows) hoặc `./run.sh` / `./gradlew run` (Linux/macOS). |
 
-### Chạy nhanh bằng lệnh (tóm tắt)
+### 0.8. Chạy nhanh bằng lệnh (tóm tắt — chỉ dùng khi đã làm quen)
 
 - Windows (PowerShell, tại thư mục game): `.\gradlew.bat run`
+  — hoặc nhấp đúp `run.bat` (dễ nhất, đã kiểm tra Java trước).
 - Linux/macOS (tại thư mục game): `./gradlew run`
-- Hoặc nhấp đúp `run.bat` (Windows) / chạy `./run.sh` (Linux/macOS).
+  — hoặc `./run.sh` (đã kiểm tra Java trước).
+- Class chính là `vn.samurai.gdx.DesktopLauncher`, nhưng bạn không cần gõ
+  `java` thủ công: Gradle sẽ biên dịch và chạy đúng class đó.
 
-## 1. Yêu cầu
+## 1. Yêu cầu (tóm tắt)
 
-- JDK 17 trở lên (đã kiểm tra với JDK 17.0.21).
-- Không cần cài Gradle trước: repo đã có sẵn `gradlew` / `gradlew.bat` (Gradle Wrapper 8.5),
-  lần chạy đầu tiên Wrapper sẽ tự tải Gradle 8.5 và Gradle sẽ tự tải LibGDX 1.12.1
-  (gdx, gdx-backend-lwjgl3, gdx-freetype và LWJGL) từ Maven Central, nên lần đầu cần
-  mạng và có thể mất vài phút. Các lần sau chạy nhanh hơn vì đã có cache.
-- Chạy trên Windows, Linux và macOS. Game lưu tiến trình vào file `samurai_save.txt`
-  trong thư mục đang chạy game.
+Xem mục 0 ở trên để biết đầy đủ. Tóm tắt: JDK 17 trở lên, không cần cài
+Gradle trước (đã có Wrapper 8.5 trong repo), lần đầu cần mạng để tải Gradle
+và LibGDX 1.12.1, các lần sau thường chạy offline được từ cache. Game lưu
+tiến trình vào `samurai_save.txt` trong thư mục game (xem mục 0.5).
 
-## 2. Cách chạy
+## 2. Cách chạy (tóm tắt)
 
-### Windows (PowerShell hoặc Command Prompt, đứng ở thư mục gốc của repo)
+Xem mục 0 ở trên — đó là hướng dẫn chạy đầy đủ và mới nhất. Tóm tắt:
 
-```bat
-gradlew.bat run
-```
-
-### Linux / macOS (đứng ở thư mục gốc của repo)
-
-```bash
-./gradlew run
-```
-
-Class chính là `vn.samurai.gdx.DesktopLauncher`, nhưng bạn không cần gõ `java` thủ công:
-Gradle sẽ biên dịch và chạy đúng class đó. Đừng dùng lại lệnh cũ
-`javac ...` + `java -cp out vn.samurai.Main`, vì class `vn.samurai.Main` (bản Swing)
-đã được thay bằng bản LibGDX và không còn tồn tại nữa.
-
-Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy lại lệnh trên
-(Gradle sẽ tiếp tục từ chỗ đã tải, không cần tải lại từ đầu).
-
-Ở menu chính:
-
-- **Enter**: chơi mới từ chương 1.
-- **L**: tiếp tục từ file lưu `samurai_save.txt` (nếu có).
-- **Esc ở menu**: thoát game.
+- Windows: nhấp đúp `run.bat`, hoặc tại thư mục game gõ `.\gradlew.bat run`.
+- Linux/macOS: tại thư mục game gõ `./run.sh`, hoặc `./gradlew run`.
+- Ở menu chính: **Enter** chơi mới từ chương 1, **L** tiếp tục từ file lưu
+  `samurai_save.txt` (nếu có), **Esc** thoát game, **F5** lưu game trước khi thoát.
 
 ## 3. Điều khiển
 
@@ -525,8 +615,7 @@ Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn �
 
 ## 8. Kiểm tra nhanh sau khi chạy
 
-1. Chạy `gradlew.bat run` (Windows) hoặc `./gradlew run` (Linux/macOS), chờ tải dependency
-   lần đầu, menu hiện ra, bấm Enter vào chương 1.
+1. Chạy `run.bat` (Windows, nhấp đúp) hoặc `./run.sh` (Linux/macOS) — xem mục 0 để biết đầy đủ — chờ tải dependency lần đầu, menu hiện ra, bấm Enter vào chương 1.
 2. Dùng W/A/S/D di chuyển và xoay, Q/E lách sang, nhìn thấy tường hộp, cây nón 3D
    và bản đồ mini, camera hơi nhún khi di chuyển.
 3. Đến gần sơn tặc, bấm J để chém, giữ L để đỡ, bấm I để né.
