@@ -14,7 +14,7 @@ tiếng chém/đỡ/parry/nhặt đồ…). Không cần file ảnh hay file nh�
 
 > Lịch sử của repo: trước đây repo là game web Three.js + server Python (15 màn, 5 boss,
 > cây kỹ năng, phe phái, cửa hàng…). Sau đó repo được viết lại thành game Java thuần Swing
-> raycasting 2,5D (8 chương, 5 boss). Bản hiện tại **nâng cấp bản Swing đó lên LibGDX 3D thật**,
+> raycasting 2,5D (8 chương, 5 boss, nay đã lên 10 chương). Bản hiện tại **nâng cấp bản Swing đó lên LibGDX 3D thật**,
 > giữ nguyên toàn bộ luật chơi, bản đồ, địch, boss, nhiệm vụ, chế tạo, lên cấp và file lưu
 > của bản Swing, chỉ thay phần hiển thị và input bằng LibGDX. Bản Swing cũ vẫn còn trong
 > lịch sử git ở commit `80555ad`, bản web gốc còn ở commit `ec46715`, nếu bạn muốn xem lại.
@@ -133,6 +133,7 @@ Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy l�
 | Esc | Tạm dừng / tiếp tục |
 | F5 | Lưu game ngay lập tức |
 | F6 | Bật / tắt nhạc nền và tiếng gió |
+| F12 | Chụp màn hình (lưu `screenshot_<thời gian>.png` vào thư mục chạy game) |
 | O | Mở / đóng cây kỹ năng (game tạm dừng) |
 | B | Mở / đóng cửa hàng (game tạm dừng) |
 | Y | Cuồng Phong Trảm (cần học, xem mục 5.9) |
@@ -377,6 +378,49 @@ sơn tặc, ronin, Tu La, bóng tối, quỷ, vệ thành). Bản này có phiê
   giảm giá**, tối đa **20%**. Giá trong cửa hàng (bấm **B**) đã tự trừ giảm giá
   này, ví dụ băng gạc 50 vàng còn 40 vàng khi đã nói chuyện với 4 dân làng.
 
+### 5.8c. Nhiệm vụ sóng và phòng thủ (mới)
+
+- **Chương 9 — Làng Cháy Giữa Đêm (sóng)**: không có địch sẵn trên bản đồ,
+  địch tràn vào từ các cổng làng theo từng đợt. Đợt 1: 2 sơn tặc + 1 cung thủ,
+  đợt 2: sơn tặc + bạo đồ + cung thủ + vong linh, đợt 3: 2 bạo đồ + ronin +
+  tín đồ Tu La. Dẹp xong một đợt thì 3 giây sau đợt tiếp theo mới tới.
+  Nhiệm vụ: chống đỡ đủ 3 đợt và hạ 2 bạo đồ trong các đợt sóng.
+- **Chương 10 — Đại Môn Thành (phòng thủ)**: giữ cờ ở cổng thành (giữa bản đồ,
+  cột cao + cờ đỏ phấp phới) trong **60 giây**. Địch tự động xông thẳng vào cờ,
+  không nhắm vào bạn — mỗi đòn trúng cờ trừ máu cờ (cờ có 100 máu, hiện trên HUD).
+  Cứ 4,5 giây lại có địch mới tràn vào (tối đa 8 địch cùng lúc, cứ 5 lần thì
+  có 1 quỷ khiên thủ). Nhiệm vụ: giữ cờ đủ 60 giây và hạ 2 quỷ khiên thủ.
+  Nếu cờ ngã (0 máu), màn hình “CỜ ĐÃ NGÃ!”, bấm **R** chơi lại màn.
+- Chương 9 và 10 nằm sau chương 8 (hạ Yamikage) như hậu truyện: hoàn thành
+  chương 8 thì bấm **N** sang chương 9, rồi chương 10, chiến thắng cuối cùng
+  hiện sau chương 10. File lưu cũ (đang ở chương 8 trở xuống) vẫn tải được,
+  chỉ là sẽ có thêm 2 chương sau đó.
+
+### 5.8d. Skeletal, PBR và bloom (mới)
+
+- **Skeletal thật**: nhân vật không còn là các mảnh đặt độc lập nữa, mà là
+  cây khớp phân cấp (`SkeletalRig.java`): gốc → hông → thân → đầu, vai →
+  khuỷu → tay → kiếm, hông → gối → chân. Khớp con kế thừa chuyển động của
+  khớp cha theo forward kinematics: nghiêng thân thì đầu và tay cũng nghiêng
+  theo, vung đùi thì cẳng chân và bàn chân cũng vung theo, vung vai thì
+  khuỷu, tay và kiếm cũng vung theo. Gối cong khi chân bước tới, khuỷu cong
+  khi tay vung, ngã chết là cả cơ thể đổ quanh gốc xuống đất.
+- **PBR**: vật liệu có độ bóng (specular) và độ nhẵn (shininess) theo chất liệu:
+  vải/đá/gỗ bóng thấp (specular 0,15, shininess 8), kim loại (kiếm, giáp, vai giáp)
+  bóng cao (specular 0,9, shininess 64). Ánh sáng điểm (point light) vàng ở cổng
+  torii và xanh ở đài hồi sinh, cộng với ánh sáng hướng theo màn ngày/đêm.
+- **Bloom + tone mapping (GLSL)**: cảnh 3D được vẽ vào FrameBuffer rồi qua
+  shader (`PostProcessor.java`): lấy vùng sáng trên 0,75 làm bloom (9 điểm lấy mẫu),
+  tone mapping ACES (đường cong filmic của PBR), gamma và vignette. Nếu shader
+  hoặc FrameBuffer không tạo được trên máy nào đó, game tự tắt post và vẽ
+  bình thường, không bao giờ crash vì shader.
+- **Ngôn ngữ**: game vẫn chủ yếu là Java (LibGDX, hơn 4000 dòng Java). Ngôn ngữ
+  duy nhất thêm vào là GLSL cho shader post (khoảng 50 dòng, nhúng trong
+  `PostProcessor.java`), vì shader bắt buộc phải viết bằng GLSL — không có
+  file ngôn ngữ nào khác chiếm đa số.
+- **Chụp màn hình**: bấm **F12** trong game để lưu ảnh `screenshot_<thời gian>.png`
+  vào thư mục chạy game (dùng để kiểm tra post và rig).
+
 ### 5.9. Cây kỹ năng (như bản web, 3 nhánh × 5 node)
 
 Mỗi lần lên cấp bạn nhận **1 điểm kỹ năng**. Bấm **O** để mở cây kỹ năng
@@ -437,9 +481,11 @@ src/main/java/vn/samurai/
 │   ├── AudioManager.java       # Tổng hợp WAV: nhạc koto/taiko, gió, 23 SFX; phát bằng LibGDX
 │   └── SkillTree.java          # Cây kỹ năng 15 node (Đao/Gió/Tâm) như bản web, kèm điều kiện học
 ├── Npc.java            # Dân làng và samurai đồng minh (phe phái, hội thoại, thưởng)
+├── gdx/SkeletalRig.java   # Cây khớp skeletal + forward kinematics (hips/torso/head/arm/elbow/leg/knee)
+├── gdx/PostProcessor.java # Shader GLSL post: bloom + ACES tone mapping + vignette qua FrameBuffer, có fallback
 run.bat                         # Windows: nhấp đúp để chạy game (kiểm tra Java rồi gọi gradlew.bat run)
 run.sh                          # Linux/macOS: ./run.sh để chạy game
-├── Levels.java     # Dữ liệu 8 chương: bản đồ dạng lưới ký tự, nhiệm vụ, thưởng, màu trời/sàn
+├── Levels.java     # Dữ liệu 10 chương: bản đồ dạng lưới ký tự, nhiệm vụ, thưởng, màu trời/sàn
 ├── Level.java      # Một chương: đọc bản đồ, tường/cây, tầm nhìn, mục tiêu, boss còn sống
 ├── Enemy.java      # Dữ liệu địch và boss: máu, tấn công, giáp, tốc độ, tầm nhìn, tỉ lệ đỡ/né
 ├── Player.java     # Người chơi: máu, khí lực, cấp/XP, vàng, túi đồ, chế tạo
@@ -463,10 +509,11 @@ Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn �
   hình học lắp ghép, chưa phải mô hình nhân vật low-poly với skeletal animation
   (xương + skinning) và shader PBR + normal-map + bloom/post-processing đầy đủ như
   bản web Three.js, chưa có cỏ instanced hàng nghìn bụi như bản web.
-- Chưa có: 15 màn đầy đủ của bản web (bản này vẫn 8 chương), nhiệm vụ sóng
-  (waves) / phòng thủ như bản web, và multiplayer/server. Phe phái, NPC, cây kỹ
-  năng và cửa hàng đã có ở dạng gọn, chưa đầy đủ như bản web (ví dụ ronin
-  trung lập, NPC đi tuần, nhiệm vụ phụ từ NPC).
+- Chưa có: 15 màn đầy đủ của bản web (bản này hiện 10 chương, đã có sóng và
+  phòng thủ ở chương 9–10, nhưng chưa đủ 15 màn của bản web), và multiplayer/server.
+  Phe phái, NPC, cây kỹ năng, cửa hàng, skeletal, PBR và bloom đã có ở dạng gọn,
+  chưa đầy đủ như bản web (ví dụ ronin trung lập, NPC đi tuần, nhiệm vụ phụ từ NPC,
+  normal map đầy đủ với tangent, shadow map, và bloom tách 2 pass thay vì 1 pass 9 điểm).
 - Không có multiplayer, không có server, không có cửa hàng mua bán, không có cây kỹ năng
   15 node và hệ phe phái đầy đủ như bản web. Kỹ năng trong bản Java chỉ có Nhất Đao Trảm (U).
 - Không có nhảy (Space) và đổi góc nhìn thứ nhất/thứ ba như bản web; bản LibGDX chỉ có

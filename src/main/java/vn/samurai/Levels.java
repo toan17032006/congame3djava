@@ -212,6 +212,66 @@ public final class Levels {
                 "Ta canh đền đã nhiều ngày, cuối cùng cũng có người đến.",
                 "Ta sẽ đánh cùng ngươi, Kurogane không dễ gì thắng được hai ta!"));
 
+        // L09: Wave mission, after the main story. Original L09 was a burning
+        // village with 3 waves. Map has no enemy letters: all enemies spawn
+        // as waves from the edges.
+        Level wave = new Level("L09", "Làng Cháy Giữa Đêm - Sóng",
+                "Làng cháy giữa đêm. Từng đợt sơn tặc tràn vào từ các cổng làng. Giữ vững 3 đợt sóng!",
+                800, 500, new RgbColor(120, 60, 40), new RgbColor(70, 50, 40),
+                new String[]{
+                        "####################",
+                        "#P.......T.........#",
+                        "#.........T........#",
+                        "#........T....i....#",
+                        "#..................#",
+                        "#.....T........T...#",
+                        "#........T.........#",
+                        "#..................#",
+                        "#.....T........T...#",
+                        "#........T....d....#",
+                        "#..................#",
+                        "#.................G#",
+                        "#..................#",
+                        "#S.................#",
+                        "####################"},
+                new Level.Objective("WAVE", "wave", 3, "Chống đỡ 3 đợt sóng"),
+                new Level.Objective("KILL", "brute", 2, "Hạ bạo đồ trong các đợt sóng"));
+        wave.waves.add(java.util.Arrays.asList("grunt", "grunt", "archer"));
+        wave.waves.add(java.util.Arrays.asList("grunt", "brute", "archer", "wraith"));
+        wave.waves.add(java.util.Arrays.asList("brute", "brute", "ronin", "ashura"));
+        levels.add(wave);
+
+        // L10: Defend mission, after the wave level. Original L14 was a castle
+        // gate with 4 waves. Here: defend the banner for 60 seconds while
+        // enemies spawn and march on it, plus kill 2 shield demons.
+        Level defend = new Level("L10", "Đại Môn Thành - Phòng Thủ",
+                "Giữ cờ ở cổng thành trong 60 giây. Địch sẽ xông thẳng vào cờ, đừng để cờ ngã!",
+                1000, 600, new RgbColor(90, 100, 130), new RgbColor(60, 55, 70),
+                new String[]{
+                        "####################",
+                        "#P.......T.........#",
+                        "#.........T........#",
+                        "#........T....i....#",
+                        "#..................#",
+                        "#.....T........T...#",
+                        "#........T.........#",
+                        "#..................#",
+                        "#.....T........T...#",
+                        "#........T....d....#",
+                        "#..................#",
+                        "#.................G#",
+                        "#..................#",
+                        "#S.................#",
+                        "####################"},
+                new Level.Objective("DEFEND", "banner", 60, "Giữ cờ 60 giây"),
+                new Level.Objective("KILL", "oni_shield", 2, "Hạ quỷ khiên thủ"));
+        defend.bannerX = 10.5;
+        defend.bannerY = 7.5;
+        defend.bannerHp = 100;
+        defend.defendDuration = 60;
+        defend.sprites.add(new Sprite(Sprite.Type.BANNER, defend.bannerX, defend.bannerY, "Cờ phòng thủ"));
+        levels.add(defend);
+
         return levels;
     }
 }

@@ -2,7 +2,7 @@ package vn.samurai;
 
 /** A billboard in the world: an item, the goal torii, or a healing shrine. */
 public class Sprite {
-    public enum Type { BANDAGE, DRAUGHT, BAMBOO, HERB, IRON, GOAL, SHRINE }
+    public enum Type { BANDAGE, DRAUGHT, BAMBOO, HERB, IRON, GOAL, SHRINE, BANNER }
 
     public Type type;
     public double x, y;

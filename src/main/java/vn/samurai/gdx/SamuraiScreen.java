@@ -17,7 +17,11 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
+import com.badlogic.gdx.graphics.g3d.environment.PointLight;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -112,6 +116,17 @@ public class SamuraiScreen implements Screen {
     private int attackKind = 0;
     private boolean attackApplied = false;
     private double stepTimer = 0;
+    private SkeletalRig skeletalRig = new SkeletalRig();
+    private PostProcessor post;
+    private int testFrameCount = 0;
+    // Wave / defend mission state (reset in loadLevel).
+    private boolean waveActive = false;
+    private double waveTimer = 2.0;
+    private double defendElapsed = 0;
+    private double defendSpawnTimer = 2.0;
+    private int defendSpawnCount = 0;
+    private boolean defendFailed = false;
+    private static final double[][] WAVE_SPAWNS = {{18.5, 1.5}, {18.5, 13.5}, {1.5, 13.5}, {18.5, 7.5}};
     private final List<Particle> particles = new ArrayList<>();
     private final Map<Enemy, Double> deathTimes = new HashMap<>();
 
@@ -182,6 +197,7 @@ public class SamuraiScreen implements Screen {
         font = loadFont(16);
         bigFont = loadFont(32);
         buildModels();
+        post = new PostProcessor(W, H);
         buildStaticForLevel();
         buildSkyForLevel();
         audio = new AudioManager();
@@ -219,7 +235,10 @@ public class SamuraiScreen implements Screen {
     private com.badlogic.gdx.graphics.g3d.Model box(Color color, float w, float h, float d) {
         ModelBuilder b = new ModelBuilder();
         com.badlogic.gdx.graphics.g3d.Model m = b.createBox(w, h, d,
-                new com.badlogic.gdx.graphics.g3d.Material(ColorAttribute.createDiffuse(color)),
+                new com.badlogic.gdx.graphics.g3d.Material(
+                        ColorAttribute.createDiffuse(color),
+                        ColorAttribute.createSpecular(0.15f, 0.15f, 0.15f, 1f),
+                        FloatAttribute.createShininess(8f)),
                 VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         allModels.add(m);
         return m;
@@ -230,7 +249,24 @@ public class SamuraiScreen implements Screen {
         com.badlogic.gdx.graphics.g3d.Model m = b.createBox(w, h, d,
                 new com.badlogic.gdx.graphics.g3d.Material(
                         TextureAttribute.createDiffuse(tex),
-                        ColorAttribute.createDiffuse(tint)),
+                        ColorAttribute.createDiffuse(tint),
+                        ColorAttribute.createSpecular(0.15f, 0.15f, 0.15f, 1f),
+                        FloatAttribute.createShininess(8f)),
+                VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal
+                        | VertexAttributes.Usage.TextureCoordinates);
+        allModels.add(m);
+        return m;
+    }
+
+    /** Metal (PBR: high specular, high shininess = low roughness) for blades and armour. */
+    private com.badlogic.gdx.graphics.g3d.Model metalBox(Texture tex, Color tint, float w, float h, float d) {
+        ModelBuilder b = new ModelBuilder();
+        com.badlogic.gdx.graphics.g3d.Model m = b.createBox(w, h, d,
+                new com.badlogic.gdx.graphics.g3d.Material(
+                        TextureAttribute.createDiffuse(tex),
+                        ColorAttribute.createDiffuse(tint),
+                        ColorAttribute.createSpecular(0.9f, 0.9f, 0.9f, 1f),
+                        FloatAttribute.createShininess(64f)),
                 VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal
                         | VertexAttributes.Usage.TextureCoordinates);
         allModels.add(m);
@@ -316,7 +352,7 @@ public class SamuraiScreen implements Screen {
         hairModel = box(new Color(0.08f, 0.06f, 0.05f, 1f), 0.42f, 0.22f, 0.42f);
         topknotModel = sphere(new Color(0.08f, 0.06f, 0.05f, 1f), 0.12f);
         obiModel = texturedBox(weaveTex, new Color(0.55f, 0.16f, 0.16f, 1f), 0.68f, 0.12f, 0.38f);
-        swordBladeModel = texturedBox(plateTex, new Color(0.9f, 0.92f, 0.95f, 1f), 0.07f, 0.95f, 0.03f);
+        swordBladeModel = metalBox(plateTex, new Color(0.9f, 0.92f, 0.95f, 1f), 0.07f, 0.95f, 0.03f);
         swordGuardModel = box(new Color(0.15f, 0.12f, 0.10f, 1f), 0.2f, 0.05f, 0.08f);
         shadowModel = transparentBox(Color.BLACK, 0.35f, 0.9f, 0.02f, 0.9f);
         cloudModel = transparentBox(Color.WHITE, 0.75f, 1f, 0.5f, 1f);
@@ -324,8 +360,8 @@ public class SamuraiScreen implements Screen {
         starModel = sphere(Color.WHITE, 0.15f);
         glowModel = transparentBox(new Color(1f, 0.2f, 0.2f, 1f), 0.25f, 1f, 1f, 1f);
         grassModel = texturedBox(foliageTex, new Color(0.6f, 0.9f, 0.5f, 1f), 0.06f, 0.45f, 0.06f);
-        plateModel = texturedBox(plateTex, new Color(0.75f, 0.76f, 0.8f, 1f), 0.68f, 0.5f, 0.4f);
-        pauldronModel = texturedBox(plateTex, new Color(0.75f, 0.76f, 0.8f, 1f), 0.18f, 0.12f, 0.24f);
+        plateModel = metalBox(plateTex, new Color(0.75f, 0.76f, 0.8f, 1f), 0.68f, 0.5f, 0.4f);
+        pauldronModel = metalBox(plateTex, new Color(0.75f, 0.76f, 0.8f, 1f), 0.18f, 0.12f, 0.24f);
         collarModel = box(Color.WHITE, 0.06f, 0.36f, 0.03f);
         sashModel = texturedBox(weaveTex, new Color(0.55f, 0.16f, 0.16f, 1f), 0.68f, 0.08f, 0.38f);
         hakamaModel = texturedBox(weaveTex, new Color(0.45f, 0.45f, 0.5f, 1f), 0.5f, 0.45f, 0.35f);
@@ -519,6 +555,21 @@ public class SamuraiScreen implements Screen {
                 .scale(scale, scale, scale);
     }
 
+    /** Place a rig part from a skeletal joint matrix: joint, then an extra pitch/roll, then centre offset, then scale. */
+    private static void placeJoint(ModelInstance inst, com.badlogic.gdx.math.Matrix4 jointWorld,
+                                   float cx, float cy, float cz, float pitchDeg, float rollDeg, float scale) {
+        inst.transform.set(jointWorld)
+                .rotate(Vector3.X, pitchDeg)
+                .rotate(Vector3.Z, rollDeg)
+                .translate(cx, cy, cz)
+                .scale(scale, scale, scale);
+    }
+
+    private static void placeJoint(ModelInstance inst, com.badlogic.gdx.math.Matrix4 jointWorld,
+                                   float cx, float cy, float cz, float scale) {
+        placeJoint(inst, jointWorld, cx, cy, cz, 0, 0, scale);
+    }
+
     private void spawnParticles(double x, double y, double z, Color color, int count) {
         for (int i = 0; i < count; i++) {
             Particle p = new Particle();
@@ -587,6 +638,12 @@ public class SamuraiScreen implements Screen {
         whirlwindCooldown = 0;
         windstepCooldown = 0;
         ironwillCooldown = 0;
+        waveActive = false;
+        waveTimer = 2.0;
+        defendElapsed = 0;
+        defendSpawnTimer = 2.0;
+        defendSpawnCount = 0;
+        defendFailed = false;
         if (healFull) player.hp = player.maxHp;
         if (wallModel != null) {
             buildStaticForLevel();
@@ -595,8 +652,20 @@ public class SamuraiScreen implements Screen {
             int avg = (level.ceiling.r + level.ceiling.g + level.ceiling.b) / 3;
             float amb = avg < 110 ? 0.35f : 0.55f;
             float dir = avg < 110 ? 0.60f : 0.90f;
+            environment = new Environment();
             environment.set(new ColorAttribute(ColorAttribute.AmbientLight, amb, amb, amb, 1f));
-            if (dirLight != null) dirLight.set(dir, dir, dir * 0.95f, -0.5f, -1f, -0.3f);
+            if (dirLight != null) {
+                dirLight.set(dir, dir, dir * 0.95f, -0.5f, -1f, -0.3f);
+                environment.add(dirLight);
+            }
+            // PBR local lighting: warm point lights at the torii goal and the shrine.
+            for (Sprite s : level.sprites) {
+                if (s.type == Sprite.Type.GOAL) {
+                    environment.add(new PointLight().set(Color.GOLD, (float) s.x, 2.5f, (float) s.y, 12f));
+                } else if (s.type == Sprite.Type.SHRINE) {
+                    environment.add(new PointLight().set(new Color(0.5f, 0.8f, 1f, 1f), (float) s.x, 2.0f, (float) s.y, 8f));
+                }
+            }
         }
     }
 
@@ -1001,6 +1070,7 @@ public class SamuraiScreen implements Screen {
 
         updateEnemies(dt);
         updateAllies(dt);
+        updateWaveDefend(dt);
         updateProjectiles(dt);
         pickupItems();
         checkGoal();
@@ -1107,6 +1177,71 @@ public class SamuraiScreen implements Screen {
         }
     }
 
+    private void updateWaveDefend(double dt) {
+        // ---- Wave mission (L09): spawn waves in order, progress on clear.
+        if (!level.waves.isEmpty()) {
+            int cleared = 0;
+            for (Level.Objective o : level.objectives) if (o.type.equals("WAVE")) cleared = o.progress;
+            boolean anyAlive = false;
+            for (Enemy e : level.enemies) if (e.alive()) { anyAlive = true; break; }
+            if (waveActive) {
+                if (!anyAlive) {
+                    waveActive = false;
+                    addObjectiveProgress("WAVE", "wave");
+                    waveTimer = 3.0;
+                    if (cleared + 1 >= level.waves.size()) {
+                        setMessage("Đã chống đỡ hết các đợt sóng!");
+                    } else {
+                        setMessage("Đã dẹp xong đợt sóng " + (cleared + 1) + "! Đợt tiếp theo sau 3 giây.");
+                    }
+                    if (audio != null) audio.play("quest");
+                }
+            } else if (cleared < level.waves.size()) {
+                waveTimer -= dt;
+                if (waveTimer <= 0) {
+                    java.util.List<String> wave = level.waves.get(cleared);
+                    for (int i = 0; i < wave.size(); i++) {
+                        double[] sp = WAVE_SPAWNS[i % WAVE_SPAWNS.length];
+                        level.enemies.add(Enemy.create(wave.get(i), sp[0], sp[1]));
+                    }
+                    waveActive = true;
+                    setMessage("ĐỢT SÓNG " + (cleared + 1) + "/" + level.waves.size() + " bắt đầu! (" + wave.size() + " địch)");
+                    if (audio != null) audio.play("roar");
+                }
+            }
+        }
+        // ---- Defend mission (L10): 60s, enemies march on the banner.
+        if (level.defendDuration > 0 && level.bannerHp > 0 && defendElapsed < level.defendDuration) {
+            defendElapsed += dt;
+            defendSpawnTimer -= dt;
+            int alive = 0;
+            for (Enemy e : level.enemies) if (e.alive()) alive++;
+            if (defendSpawnTimer <= 0 && alive < 8) {
+                defendSpawnTimer = 4.5;
+                defendSpawnCount++;
+                String kind;
+                if (defendSpawnCount % 5 == 0) kind = "oni_shield";
+                else if (defendSpawnCount % 3 == 0) kind = "brute";
+                else kind = rng.nextBoolean() ? "grunt" : "archer";
+                double[] sp = WAVE_SPAWNS[rng.nextInt(WAVE_SPAWNS.length)];
+                level.enemies.add(Enemy.create(kind, sp[0], sp[1]));
+            }
+            if (defendElapsed >= level.defendDuration) {
+                for (Level.Objective o : level.objectives) {
+                    if (o.type.equals("DEFEND")) o.progress = o.required;
+                }
+                setMessage("Đã giữ cờ đủ 60 giây! Cờ vẫn đứng vững.");
+                if (audio != null) audio.play("quest");
+            }
+        }
+        if (level.defendDuration > 0 && level.bannerHp <= 0 && !defendFailed) {
+            defendFailed = true;
+            state = State.DEAD;
+            if (audio != null) audio.play("death");
+            setMessage("Cờ phòng thủ đã ngã! Bấm R chơi lại màn.");
+        }
+    }
+
     private void updateEnemies(double dt) {
         for (Enemy e : new ArrayList<>(level.enemies)) {
             if (!e.alive()) continue;
@@ -1115,6 +1250,36 @@ public class SamuraiScreen implements Screen {
                 e.stunTimer -= dt;
                 e.state = Enemy.STUNNED;
                 if (e.stunTimer <= 0) e.state = Enemy.IDLE;
+                continue;
+            }
+            // Defend mission: enemies march on the banner, not the player.
+            if (level.defendDuration > 0 && defendElapsed < level.defendDuration && level.bannerHp > 0) {
+                double db = Math.hypot(level.bannerX - e.x, level.bannerY - e.y);
+                if (db <= e.attackRange) {
+                    if (e.state == Enemy.WINDUP) {
+                        e.windupTimer -= dt;
+                        if (e.windupTimer <= 0) {
+                            level.bannerHp -= Math.max(1, e.attack);
+                            spawnParticles(level.bannerX, 1.2, level.bannerY, Color.RED, 10);
+                            if (audio != null) audio.play("hitHeavy");
+                            setMessage("Cờ bị tấn công! Còn " + Math.max(0, level.bannerHp) + "/100 máu.");
+                            e.state = Enemy.COOLDOWN;
+                            e.cooldownTimer = e.cooldownTime;
+                        }
+                    } else if (e.cooldownTimer <= 0) {
+                        e.state = Enemy.WINDUP;
+                        e.windupTimer = 0.5;
+                    } else {
+                        e.state = Enemy.COOLDOWN;
+                    }
+                } else {
+                    e.state = Enemy.CHASE;
+                    double d2 = Math.max(0.01, db);
+                    double nx = e.x + (level.bannerX - e.x) / d2 * e.speed * dt;
+                    double ny = e.y + (level.bannerY - e.y) / d2 * e.speed * dt;
+                    if (!level.isWallAt(nx, e.y)) e.x = nx;
+                    if (!level.isWallAt(e.x, ny)) e.y = ny;
+                }
                 continue;
             }
             double dist = Math.hypot(e.x - player.x, e.y - player.y);
@@ -1246,7 +1411,7 @@ public class SamuraiScreen implements Screen {
 
     private void pickupItems() {
         for (Sprite s : level.sprites) {
-            if (s.taken || s.type == Sprite.Type.GOAL || s.type == Sprite.Type.SHRINE) continue;
+            if (s.taken || s.type == Sprite.Type.GOAL || s.type == Sprite.Type.SHRINE || s.type == Sprite.Type.BANNER) continue;
             if (Math.hypot(s.x - player.x, s.y - player.y) < 0.7) {
                 s.taken = true;
                 if (audio != null) audio.play("pickup");
@@ -1283,6 +1448,17 @@ public class SamuraiScreen implements Screen {
     }
 
     private void handleInput() {
+        if (justPressed(Keys.F12)) {
+            try {
+                Pixmap pix = com.badlogic.gdx.utils.ScreenUtils.getFrameBufferPixmap(0, 0, W, H);
+                String name = "screenshot_" + System.currentTimeMillis() + ".png";
+                com.badlogic.gdx.graphics.PixmapIO.writePNG(Gdx.files.local(name), pix);
+                pix.dispose();
+                setMessage("Đã lưu ảnh chụp màn hình: " + name);
+            } catch (Exception e) {
+                setMessage("Không lưu được ảnh chụp màn hình.");
+            }
+        }
         if (justPressed(Keys.F6) && audio != null) {
             audio.toggleMusic();
             String m = audio.isMusicOn() ? "Đã bật nhạc nền." : "Đã tắt nhạc nền (F6 để bật lại).";
@@ -1379,6 +1555,16 @@ public class SamuraiScreen implements Screen {
         update(dt);
         refreshPrevPressed();
 
+        // Test hook auto-start must run before the MENU early return,
+        // otherwise the game never leaves the menu in test mode.
+        if ("true".equals(System.getProperty("samurai.testScreenshot")) && state == State.MENU) {
+            startNew();
+            // Face the first enemy so the skeletal rig is visible in the test shot.
+            if (!level.enemies.isEmpty()) {
+                vn.samurai.Enemy first = level.enemies.get(0);
+                player.angle = Math.atan2(first.y - player.y, first.x - player.x);
+            }
+        }
         if (state == State.MENU) {
             Gdx.gl.glClearColor(0.08f, 0.10f, 0.14f, 1f);
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
@@ -1386,7 +1572,28 @@ public class SamuraiScreen implements Screen {
             return;
         }
 
-        render3d();
+        if (post != null && post.enabled) {
+            post.begin();
+            render3d();
+            post.endAndDraw();
+        } else {
+            render3d();
+        }
+        // Test hook: --test-screenshot (DesktopLauncher) auto-starts a game and
+        // saves one frame, so the post-processing and rig can be checked without
+        // a manual key press under Xvfb. Normal players never pass this flag.
+        if ("true".equals(System.getProperty("samurai.testScreenshot"))) {
+            testFrameCount++;
+            if (testFrameCount >= 120) {
+                try {
+                    Pixmap pix = com.badlogic.gdx.utils.ScreenUtils.getFrameBufferPixmap(0, 0, W, H);
+                    com.badlogic.gdx.graphics.PixmapIO.writePNG(Gdx.files.local("test_screenshot.png"), pix);
+                    pix.dispose();
+                } catch (Exception ignored) {
+                }
+                Gdx.app.exit();
+            }
+        }
         drawHud();
         // Vignette + low HP pulse (post feel, without a custom shader).
         shapes.begin(ShapeRenderer.ShapeType.Filled);
@@ -1405,7 +1612,7 @@ public class SamuraiScreen implements Screen {
         if (showShop) drawShop();
         if (showInventory) drawInventory();
         if (state == State.PAUSED) drawOverlay("TẠM DỪNG", "Esc: tiếp tục  ·  M: về menu  ·  F5: lưu game");
-        if (state == State.DEAD) drawOverlay("BẠN ĐÃ GỤC NGÃ", "R: chơi lại màn này  ·  M: về menu");
+        if (state == State.DEAD) drawOverlay(defendFailed ? "CỜ ĐÃ NGÃ!" : "BẠN ĐÃ GỤC NGÃ", "R: chơi lại màn này  ·  M: về menu");
         if (state == State.LEVEL_COMPLETE) drawOverlay("HOÀN THÀNH MÀN!",
                 "Thưởng: +" + level.rewardXp + " XP, +" + level.rewardCoins + " vàng  ·  N: sang màn tiếp  ·  M: về menu");
         if (state == State.VICTORY) drawOverlay("CHIẾN THẮNG!",
@@ -1627,54 +1834,65 @@ public class SamuraiScreen implements Screen {
         }
         float yBase = (float) (bob + (dead ? -deathProg * 0.2f : 0));
         ModelInstance[] parts = enemyInstances(e);
-        // 0 torso, 1 obi, 2 head, 3 hair, 4 topknot, 5 armR, 6 armL, 7 legR, 8 legL, 9 swordBlade, 10 swordGuard, 11 shadow.
-        placePart(parts[0], (float) e.x, 1.15f * scale + yBase, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, 0, 0);
-        placePart(parts[1], (float) e.x, 1.05f * scale + yBase, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, 0, 0);
-        placePart(parts[2], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, 0, 0, 0, headTilt, 0, 0, 0, 0);
-        placePart(parts[3], (float) e.x, 1.62f * scale + yBase, (float) e.y, yaw, scale, 0, 0, -0.05f, headTilt, 0, 0, 0, 0);
-        placePart(parts[4], (float) e.x, 1.74f * scale + yBase, (float) e.y, yaw, scale, 0, 0, -0.12f, headTilt, 0, 0, 0, 0);
-        placePart(parts[5], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch, 12f, 0, -0.25f, 0);
-        placePart(parts[6], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, -0.42f, 0, 0, armLPitch, -12f, 0, -0.25f, 0);
-        placePart(parts[7], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, 0.16f, 0, 0, legSwing, 0, 0, -0.35f, 0);
-        placePart(parts[8], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, -0.16f, 0, 0, -legSwing, 0, 0, -0.35f, 0);
-        // Sword follows the right arm: hand at shoulder + arm pitch, blade tilted forward.
+        // Skeletal pose: elbow bends with the arm, knee bends when the leg
+        // swings forward, and the whole body falls around the root on death.
+        // These angles go into the joint tree, not into flat part positions,
+        // so children inherit their parent's motion (torso -> head/arms,
+        // thigh -> shin/foot, shoulder -> elbow/hand/sword).
+        float elbowR = -25f + armRPitch * 0.2f;
+        float elbowL = -20f + armLPitch * 0.2f;
+        float kneeR = legSwing > 0 ? legSwing * 0.7f : 0;
+        float kneeL = -legSwing > 0 ? -legSwing * 0.7f : 0;
+        float rootPitch = dead ? -deathProg * 90f : 0;
+        float rootY = (float) (yBase + (dead ? deathProg * 0.25f : 0));
+        float torsoLean = dead ? 0 : lean;
+        skeletalRig.pose((float) e.x, rootY, (float) e.y, yaw, scale, rootPitch,
+                torsoLean, headTilt,
+                armRPitch, armLPitch, elbowR, elbowL,
+                legSwing, -legSwing, kneeR, kneeL);
+        SkeletalRig rig = skeletalRig;
+        // Main joints.
+        placeJoint(parts[0], rig.torso.world, 0, 0, 0, scale);
+        placeJoint(parts[1], rig.hips.world, 0, 0.15f, 0, scale);
+        placeJoint(parts[2], rig.head.world, 0, 0, 0, scale);
+        placeJoint(parts[3], rig.head.world, 0, 0.10f, -0.05f, scale);
+        placeJoint(parts[4], rig.head.world, 0, 0.22f, -0.12f, scale);
+        placeJoint(parts[5], rig.shoulderR.world, 0, -0.25f, 0, scale);
+        placeJoint(parts[6], rig.shoulderL.world, 0, -0.25f, 0, scale);
+        placeJoint(parts[7], rig.hipR.world, 0, -0.35f, 0, scale);
+        placeJoint(parts[8], rig.hipL.world, 0, -0.35f, 0, scale);
+        // Sword follows the hand (shoulder -> elbow -> hand), tilted forward.
         if (e.kind.equals("villager")) {
-            // Villagers carry no sword: hide both sword parts underground.
-            placePart(parts[9], (float) e.x, -10f, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.12f);
-            placePart(parts[10], (float) e.x, -10f, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch, 0, 0, -0.5f, 0.05f);
-            placePart(parts[27], (float) e.x, -10f, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.13f);
+            place(parts[9], (float) e.x, -10f, (float) e.y, yaw, scale);
+            place(parts[10], (float) e.x, -10f, (float) e.y, yaw, scale);
+            place(parts[27], (float) e.x, -10f, (float) e.y, yaw, scale);
         } else {
-            placePart(parts[9], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.12f);
-            placePart(parts[10], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch, 0, 0, -0.5f, 0.05f);
+            placeJoint(parts[9], rig.handR.world, 0, 0.15f, 0.12f, -55f, 0, scale);
+            placeJoint(parts[10], rig.handR.world, 0, 0, 0.05f, scale);
+            placeJoint(parts[27], rig.handR.world, 0, 0.15f, 0.13f, -55f, 0, scale);
         }
         place(parts[11], (float) e.x, 0.02f, (float) e.y, 0, scale);
-        // Humanoid v2 details, following torso/head/leg transforms.
+        // Humanoid v2 details, attached to their parent joints.
         boolean armour = hasArmour(e);
-        // Chest plate only for armoured enemies/bosses, otherwise hidden by moving it underground.
-        float plateY = armour ? 1.18f * scale + yBase : -10f;
-        placePart(parts[12], (float) e.x, plateY, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, 0, 0.02f);
-        placePart(parts[13], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, -0.42f, 0.05f, 0, armLPitch, 0, 0, 0, 0);
-        placePart(parts[14], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0.05f, 0, armRPitch, 0, 0, 0, 0);
-        // Kimono collar V: two angled white strips on the chest.
-        placePart(parts[15], (float) e.x, 1.28f * scale + yBase, (float) e.y, yaw, scale, -0.10f, 0, 0.18f, lean, 16f, 0, 0, 0);
-        placePart(parts[16], (float) e.x, 1.28f * scale + yBase, (float) e.y, yaw, scale, 0.10f, 0, 0.18f, lean, -16f, 0, 0, 0);
-        placePart(parts[17], (float) e.x, 1.02f * scale + yBase, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, 0, 0);
-        placePart(parts[18], (float) e.x, 0.92f * scale + yBase, (float) e.y, yaw, scale, 0, 0, 0, lean, 0, 0, -0.05f, 0);
-        // Gaiters + sandals follow the legs.
-        placePart(parts[19], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, 0.16f, 0, 0, legSwing, 0, 0, -0.55f, 0);
-        placePart(parts[20], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, -0.16f, 0, 0, -legSwing, 0, 0, -0.55f, 0);
-        placePart(parts[21], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, 0.16f, 0, 0, legSwing, 0, 0, -0.72f, 0.05f);
-        placePart(parts[22], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, -0.16f, 0, 0, -legSwing, 0, 0, -0.72f, 0.05f);
-        // Face follows the head.
-        placePart(parts[23], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, -0.08f, 0.02f, 0.19f, headTilt, 0, 0, 0, 0);
-        placePart(parts[24], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, 0.08f, 0.02f, 0.19f, headTilt, 0, 0, 0, 0);
-        placePart(parts[25], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, 0, -0.03f, 0.20f, headTilt, 0, 0, 0, 0);
-        // Saya (scabbard) on the back, diagonal.
-        placePart(parts[26], (float) e.x, 1.20f * scale + yBase, (float) e.y, yaw, scale, -0.30f, 0, -0.22f, lean, -25f, 0, 0, 0);
-        // Hamon edge along the blade (already hidden for villagers above).
-        if (!e.kind.equals("villager")) {
-            placePart(parts[27], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.13f);
+        if (armour) {
+            placeJoint(parts[12], rig.torso.world, 0, 0.03f, 0.02f, scale);
+        } else {
+            place(parts[12], (float) e.x, -10f, (float) e.y, yaw, scale);
         }
+        placeJoint(parts[13], rig.shoulderL.world, 0, 0.05f, 0, scale);
+        placeJoint(parts[14], rig.shoulderR.world, 0, 0.05f, 0, scale);
+        placeJoint(parts[15], rig.torso.world, -0.10f, 0.13f, 0.18f, 0, 16f, scale);
+        placeJoint(parts[16], rig.torso.world, 0.10f, 0.13f, 0.18f, 0, -16f, scale);
+        placeJoint(parts[17], rig.hips.world, 0, 0.12f, 0, scale);
+        placeJoint(parts[18], rig.hips.world, 0, 0.02f, -0.05f, scale);
+        placeJoint(parts[19], rig.kneeR.world, 0, -0.10f, 0, scale);
+        placeJoint(parts[20], rig.kneeL.world, 0, -0.10f, 0, scale);
+        placeJoint(parts[21], rig.kneeR.world, 0, -0.27f, 0.05f, scale);
+        placeJoint(parts[22], rig.kneeL.world, 0, -0.27f, 0.05f, scale);
+        placeJoint(parts[23], rig.head.world, -0.08f, 0.02f, 0.19f, scale);
+        placeJoint(parts[24], rig.head.world, 0.08f, 0.02f, 0.19f, scale);
+        placeJoint(parts[25], rig.head.world, 0, -0.03f, 0.20f, scale);
+        placeJoint(parts[26], rig.torso.world, -0.30f, 0.05f, -0.22f, 0, -25f, scale);
         for (ModelInstance inst : parts) modelBatch.render(inst, environment);
         if (e.state == Enemy.WINDUP) {
             ModelInstance flash = new ModelInstance(boxSmallModel);
@@ -1746,6 +1964,21 @@ public class SamuraiScreen implements Screen {
                 modelBatch.render(it, environment);
                 break;
             }
+            case BANNER: {
+                // Defend banner: a tall pole with a waving flag (flag sways with time).
+                ModelInstance pole = new ModelInstance(boxSmallModel);
+                pole.transform.idt().translate(x, 1.5f, z).scale(0.25f, 7.5f, 0.25f);
+                modelBatch.render(pole, environment);
+                float sway = (float) Math.sin(gameTime * 3) * 0.15f;
+                ModelInstance flag = new ModelInstance(boxSmallModel);
+                flag.transform.idt().translate(x + 0.7f, 2.6f + sway, z).scale(2.8f, 1.4f, 0.15f);
+                try {
+                    flag.materials.get(0).set(ColorAttribute.createDiffuse(Color.RED));
+                } catch (Exception ignored) {
+                }
+                modelBatch.render(flag, environment);
+                break;
+            }
             default:
                 break;
         }
@@ -1794,6 +2027,15 @@ public class SamuraiScreen implements Screen {
         for (Level.Objective o : level.objectives) {
             text(font, (o.done() ? "[x] " : "[ ] ") + o.text + " (" + o.progress + "/" + o.required + ")", 18, oy);
             oy += 16;
+        }
+        if (level.defendDuration > 0) {
+            text(font, "CỜ PHÒNG THỦ: " + Math.max(0, level.bannerHp) + "/100  |  Còn " + Math.max(0, (int) Math.ceil(level.defendDuration - defendElapsed)) + " giây", 18, oy + 4);
+            oy += 20;
+        }
+        if (!level.waves.isEmpty()) {
+            int cleared = 0;
+            for (Level.Objective o : level.objectives) if (o.type.equals("WAVE")) cleared = o.progress;
+            text(font, "Sóng: " + (waveActive ? (cleared + 1) + "/" + level.waves.size() + " đang đánh" : cleared + "/" + level.waves.size() + " đã xong"), 18, oy + 4);
         }
         if (boss != null) {
             layout.setText(font, boss.name);
@@ -1968,6 +2210,7 @@ public class SamuraiScreen implements Screen {
 
     @Override
     public void dispose() {
+        if (post != null) post.dispose();
         if (audio != null) audio.dispose();
         // allModels dispose also disposes the shared textures via their
         // materials, so do not dispose textures separately here.

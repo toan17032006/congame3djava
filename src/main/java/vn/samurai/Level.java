@@ -31,6 +31,12 @@ public class Level {
     public double startX, startY, startAngle = 0;
     public List<Enemy> enemies = new ArrayList<>();
     public List<Npc> npcs = new ArrayList<>();
+    // Wave mission (L09): waves of enemy kinds, spawned in order.
+    public java.util.List<java.util.List<String>> waves = new ArrayList<>();
+    // Defend mission (L10): banner position and HP, defend duration in seconds.
+    public double bannerX = 0, bannerY = 0;
+    public int bannerHp = 100;
+    public double defendDuration = 0;
     public List<Sprite> sprites = new ArrayList<>();
     public List<Objective> objectives = new ArrayList<>();
 
