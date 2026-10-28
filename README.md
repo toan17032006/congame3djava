@@ -1,141 +1,281 @@
-# Đạo Của Kẻ Vô Danh — Samurai 3D Action RPG
+# Đạo Của Kẻ Vô Danh — Samurai 3D (bản Java)
 
-Game samurai 3D Action RPG (Action RPG + Soulslike + Hack-and-slash + Survival) chạy trên web,
-xây bằng **Three.js** (frontend) và **FastAPI + SQLite** (backend). 15 màn chơi, 5 boss nhiều pha,
-chiến đấu soulslike (stamina, né, đỡ, parry), AI NPC theo phe phái, chế tạo, kỹ năng, save/load.
+Game samurai hành động góc nhìn thứ nhất, viết bằng **Java thuần (JDK chuẩn, Swing/Java2D),
+không dùng Spring, không dùng thư viện ngoài, không dùng ngôn ngữ khác**.
+Đồ họa 3D trong bản Java là **raycasting góc nhìn thứ nhất** (tường, cây, nhân vật và vật phẩm
+được chiếu phối cảnh theo khoảng cách, có bản đồ mini góc phải trên) — không phải mô hình 3D
+Three.js như bản web cũ.
 
-> Toàn bộ mô hình, hoạt ảnh, âm thanh và hiệu ứng đều là **procedural** (sinh bằng mã) —
-> dự án không cần tải asset ngoài nào và không kèm tài nguyên có bản quyền.
+> Lưu ý về phạm vi chuyển đổi: repo này trước đây là game web Three.js + server Python
+> (15 màn, 5 boss, cây kỹ năng, phe phái, cửa hàng…). Bản Java này **thay thế hoàn toàn**
+> bản web/Python đó bằng một game Java mới, giữ lại cốt truyện, tên màn, tên boss, nhiệm vụ
+> và vòng lặp chiến đấu soulslike, nhưng cô đọng thành **8 chương, 5 boss**, với hệ thống
+> kỹ năng/chế tạo/phe phái được đơn giản hóa cho phù hợp với Java thuần. Các file JS/Python
+> cũ đã được xóa khỏi repo.
 
----
+## 1. Yêu cầu
 
-## 1. Chạy nhanh
+- JDK 17 trở lên (đã kiểm tra với JDK 17.0.21).
+- Không cần Maven, Gradle, Node, Python hay tải thêm thư viện nào.
+- Chạy trên Windows, Linux và macOS. Game lưu tiến trình vào file `samurai_save.txt`
+  trong thư mục đang chạy game (thư mục làm việc khi gõ lệnh `java ...`).
+
+## 2. Cách chạy
+
+### Linux / macOS
 
 ```bash
-# 1) Backend (Python 3.10+)
-pip install -r requirements.txt
-pip install -e .            # tạo lệnh CLI `samurai`
-
-# 2) Frontend build (Node 18+)
-npm install
-npm run build               # bundle -> web/dist/
-
-# 3) Chơi
-samurai serve               # mở http://127.0.0.1:8000 tự động trong trình duyệt
+mkdir -p out
+javac -encoding UTF-8 -d out $(find src -name "*.java")
+java -cp out vn.samurai.Main
 ```
 
-Biến thể lệnh:
+### Windows (PowerShell)
 
-| Lệnh | Ý nghĩa |
-|---|---|
-| `samurai serve` | Chạy backend + client, tự mở trình duyệt |
-| `samurai serve --port 9000` | Chọn cổng (tự dò cổng trống nếu bận) |
-| `samurai serve --no-browser` | Không tự mở trình duyệt |
-| `samurai serve --reload` | Dev: tự nạp lại backend khi sửa Python |
-| `python -m server serve` | Tương đương `samurai serve` khi chưa cài `pip install -e .` |
-| `npm run build:watch` | Dev: bundle lại tự động khi sửa JS |
-
-Nếu `web/dist` chưa được build, server vẫn phục vụ `web/index.html` (báo lỗi thiếu bundle) —
-hãy chạy `npm run build` trước. Database SQLite (`samurai.db`) **tự tạo lần đầu chạy**.
-
-## 2. Kiến trúc
-
-```
-game3dconbo/
-├── server/                 # Backend FastAPI
-│   ├── main.py             # App: static client + REST save API
-│   ├── db.py               # SQLite (tự tạo schema, validate payload, WAL)
-│   └── cli.py              # CLI `samurai serve` (dò cổng, mở browser)
-├── web/
-│   ├── index.html
-│   ├── dist/               # Kết quả build (bundle.js/css + index.html)
-│   └── src/
-│       ├── main.js         # Entry
-│       ├── game.js         # Orchestrator: hệ thống, state, vòng lặp chính
-│       ├── core/           # engine (renderer/loop/quality), input (rebindable,
-│       │                   #  chặn key-repeat), cameraRig (1st/3rd, lock-on,
-│       │                   #  collision clamp, shake), utils (noise fbm, rng seed)
-│       ├── data/           # Dữ liệu tách khỏi mã: items, skills, enemies,
-│       │                   # bosses, recipes, quests, levels (15), regions, keys
-│       ├── gfx/            # humanoid (rig procedural), animator + clips
-│       │                   # (state machine pose-clip có blending & events),
-│       │                   # terrain, props (instancing), particles/weather,
-│       │                   # vfx (slash arc, telegraph, damage popup), sky, audio
-│       ├── entities/       # player, npc (FSM AI), boss (pha/telegraph/summon),
-│       │                   # interactable (node/đài/rương/cổng/thương nhân)
-│       ├── systems/        # combat (hit-detection arc/AoE, parry, projectiles),
-│       │                   # world (builder 8 kiểu địa hình + colliders),
-│       │                   # levelManager (15 màn: spawn/wave/objective/reward),
-│       │                   # progression, inventory, crafting, quests,
-│       │                   # factions, saveSystem
-│       └── ui/             # HUD, panels (túi đồ/kỹ năng/chế tạo/nhiệm vụ/bản đồ/
-│                           # shop), screens (menu/loading/pause/death/...), styles
-├── pyproject.toml          # console script: samurai
-├── requirements.txt        # fastapi, uvicorn
-└── build.mjs               # esbuild bundler
+```powershell
+New-Item -ItemType Directory -Force out
+javac -encoding UTF-8 -d out (Get-ChildItem -Recurse -Filter *.java src).FullName
+java -cp out vn.samurai.Main
 ```
 
-Nguyên tắc: gameplay/rendering/AI/dữ liệu/UI tách module; dữ liệu cân bằng nằm ở `web/src/data/*`;
-không phụ thuộc vòng (mỗi tầng chỉ import xuống dưới); vật lý đơn giản tự viết
-(heightfield + collider tròn) thay vì kéo engine vật lý ngoài.
+### Windows (Command Prompt)
+
+```bat
+if not exist out mkdir out
+javac -encoding UTF-8 -d out src\main\java\vn\samurai\*.java
+java -cp out vn.samurai.Main
+```
+
+Không chạy `java` trực tiếp từ trong thư mục `src/...` vì như vậy sẽ thiếu classpath
+và class chính `vn.samurai.Main` sẽ không tìm thấy các class còn lại.
+
+Ở menu chính:
+
+- **Enter**: chơi mới từ chương 1.
+- **L**: tiếp tục từ file lưu `samurai_save.txt` (nếu có).
+- **Esc ở menu**: thoát game.
 
 ## 3. Điều khiển
 
 | Phím | Hành động |
-|---|---|
-| W / A / S / D | Di chuyển theo hướng camera |
-| Shift | Sprint (tốn khí lực) |
-| Space | Nhảy |
-| J | Đòn nhanh (combo đến 3–4 nhánh theo vũ khí) |
-| K | Đòn mạnh (sát thương lớn, phá đỡ) |
-| L (giữ) | Đỡ đòn; **nhấn đúng thời điểm** = Parry → địch mất thăng bằng, đòn kế x2 |
-| I | Né / lăn (bất khả xâm phạm ngắn, tối đa 2 lần liên tiếp) |
-| U | Kỹ năng đặc biệt (gán ở cây kỹ năng — mặc định Nhất Đao Trảm) |
-| C | Khóa / mở khóa mục tiêu |
-| V | Đổi góc nhìn thứ nhất ↔ thứ ba |
-| E | Tương tác (tài nguyên, đài hồi sinh, rương, thương nhân) |
-| Tab / T / Q / M | Túi đồ / Kỹ năng / Nhiệm vụ / Bản đồ |
-| Esc | Tạm dừng · đóng panel |
-| Chuột | Nhìn quanh (khóa con trỏ) · lăn = zoom |
+| --- | --- |
+| W / S | Tiến / lùi |
+| A / D | Xoay trái / phải |
+| ↑ / ↓ / ← / → | Tiến / lùi / xoay trái / xoay phải (phím mũi tên, thay thế WASD) |
+| Q / E | Lách sang trái / phải |
+| Shift (giữ) | Chạy nhanh, tốn khí lực |
+| J | Đánh nhẹ |
+| K | Đánh mạnh |
+| U | Kỹ năng đặc biệt: Nhất Đao Trảm |
+| L (giữ) | Đỡ đòn. **Nhấn L đúng lúc đòn địch chạm tới (trong 0,25 giây) = Parry** |
+| I | Né (lao về trước, bất khả xâm phạm 0,4 giây) |
+| F | Tương tác đài hồi sinh khi đứng gần đài |
+| 1 | Dùng băng gạc (hồi 30 máu) |
+| 2 | Dùng thuốc hồi máu (hồi 60 máu) |
+| C | Chế tạo (xem mục 6) |
+| Tab | Mở / đóng túi đồ (game tạm dừng khi mở túi đồ) |
+| Esc | Tạm dừng / tiếp tục |
+| F5 | Lưu game ngay lập tức |
+| N | Sang màn tiếp (chỉ ở màn hình hoàn thành màn) |
+| R | Chơi lại màn (chỉ ở màn hình gục ngã) |
+| M | Về menu (ở màn tạm dừng, gục ngã, hoàn thành màn, chiến thắng) |
 
-Khi mở panel hoặc tạm dừng, mô phỏng game tạm dừng và input không còn tác động lên nhân vật.
-Phím có thể rebind qua `web/src/data/keys.js` (Input.rebind hỗ trợ runtime).
+## 4. Cách chơi tổng quan
 
-## 4. Save & backend
+1. Ở menu, bấm Enter để chơi mới.
+2. Nhiệm vụ của màn hiện tại luôn hiện ở góc trái trên, dạng `[ ] Tên nhiệm vụ (tiến độ/tổng)`.
+   Nhiệm vụ xong sẽ chuyển thành `[x]`.
+3. Di chuyển trong mê cung, đánh địch, nhặt vật phẩm. Khi tất cả nhiệm vụ xong:
+   - Nếu màn có nhiệm vụ “Đến cổng”, hãy đi đến **cổng Torii màu đỏ** để qua màn.
+   - Nếu màn chỉ có nhiệm vụ đánh boss / giết địch / thu thập (không có nhiệm vụ đến cổng),
+     màn sẽ tự hoàn thành ngay khi xong nhiệm vụ.
+4. Ở màn hình hoàn thành, bấm **N** để sang màn tiếp. Game tự lưu sau mỗi màn.
+5. Hết máu (HP = 0) sẽ vào màn hình gục ngã, bấm **R** để chơi lại màn đó với đầy máu,
+   giữ nguyên cấp độ, kinh nghiệm, vàng và túi đồ trước khi vào màn.
+6. Hạ Yamikage ở chương cuối sẽ vào màn hình chiến thắng.
 
-- Save schema versioned (v1) gồm: meta, player (level/xp/attrs/skills/equip/inventory), progress (màn, nhiệm vụ).
-- Lưu **cục bộ (localStorage)** + đồng bộ lên server `POST /api/saves/{slot}` vào SQLite.
-- Server validate: tên slot, kích thước ≤2MB, kiểu dữ liệu, key bắt buộc — dữ liệu client
-  **không được tin tưởng tuyệt đối** (game đơn người nên client là nguồn sự thật; server chỉ chặn payload rác).
-- API: `GET /api/health` · `GET/POST/DELETE /api/saves/{slot}` · `GET /api/saves`.
-- Đài hồi sinh trong game (nhấn E) = hồi đầy + lưu ngay.
+## 5. Toàn bộ chức năng
 
-## 5. Build production & triển khai
+### 5.1. Di chuyển, góc nhìn và bản đồ
 
-```bash
-npm run build              # minify -> web/dist/
-# chạy server production (ví dụ):
-uvicorn server.main:app --host 0.0.0.0 --port 8000
+- **Góc nhìn thứ nhất raycasting**: tường và cây được vẽ theo khoảng cách, càng xa càng tối
+  (sương mù theo khoảng cách), mặt trước/mặt bên của tường có độ sáng khác nhau để dễ
+  phân biệt hướng.
+- **Va chạm**: người chơi và địch không đi xuyên tường. Di chuyển thử theo từng trục X rồi Y,
+  nên khi đi chéo vào góc tường sẽ trượt dọc tường thay vì bị kẹt.
+- **Bản đồ mini (góc phải trên)**: tường trắng, cây xanh lá, người chơi là chấm vàng,
+  địch là chấm cam (boss đỏ), cổng Torii vàng, đài hồi sinh xanh dương, vật phẩm xanh lá.
+- **Đài hồi sinh**: biểu tượng xanh dương trong màn. Đứng gần (dưới 1,2 ô) và bấm **F** để
+  hồi đầy máu, hồi đầy khí lực và lưu game ngay lập tức.
+
+### 5.2. Chiến đấu theo kiểu soulslike
+
+- **Khí lực (Stamina, tối đa 100)**: đánh, chạy nhanh, né và đỡ đều tốn khí lực.
+  Khí lực hồi 25/giây sau 0,8 giây không dùng khí lực. Hết khí lực thì không đánh/né được.
+- **Đánh nhẹ (J)**: tốn 12 khí lực, tầm 2,2 ô, sát thương = sát thương kiếm, thời gian ra đòn 0,35 giây.
+- **Đánh mạnh (K)**: tốn 25 khí lực, tầm 2,6 ô, sát thương = sát thương kiếm + 12, thời gian 0,7 giây.
+- **Nhất Đao Trảm (U)**: tốn 35 khí lực, tầm 3,4 ô, góc đánh rộng, sát thương = sát thương kiếm × 2 + 14,
+  hồi chiêu 5 giây.
+- **Combo và chí mạng**: mỗi đòn có 10% chí mạng (sát thương × 1,5). Sát thương thực tế
+  = sát thương gốc − giáp của địch, tối thiểu 1.
+- **Đỡ (giữ L)**: đòn địch trúng khi đang đỡ chỉ mất 1/10 sát thương và tốn 8 khí lực.
+- **Parry**: nếu bạn bắt đầu giữ L trong 0,25 giây trước khi đòn địch chạm tới, địch bị choáng
+  1,5 giây và đòn kế tiếp của bạn được **×2 sát thương**. Đây là cách hiệu quả nhất để hạ
+  Ronin và boss vốn có tỉ lệ đỡ/né cao.
+- **Né (I)**: tốn 20 khí lực, lao về trước 1,2 ô, bất khả xâm phạm 0,4 giây, hồi chiêu 0,8 giây.
+  Đòn địch chạm tới trong lúc né sẽ không gây sát thương và hiện “Né thành công”.
+- **Đòn của địch có báo trước (telegraph)**: trước khi chém, địch vào trạng thái giơ vũ khí
+  trong 0,5 giây và được viền đỏ. Đó là lúc để né hoặc parry, đừng đứng yên chịu đòn.
+- **Vết chém trên màn hình**: khi đánh trúng, màn hình hiện vòng cung kiếm ở giữa;
+  khi bị thương, màn hình chớp đỏ và có tiếng bíp cảnh báo.
+
+### 5.3. Địch và AI
+
+- Địch chỉ phát hiện bạn khi bạn ở trong tầm nhìn và không bị tường chắn
+  (kiểm tra đường thẳng giữa địch và bạn có vướng tường hay không).
+- Khi phát hiện, địch đuổi theo bạn; khi vào tầm đánh, địch giơ vũ khí 0,5 giây rồi mới chém.
+  Sau mỗi đòn, địch nghỉ theo thời gian hồi chiêu riêng.
+- **Cung thủ và địch dùng đòn xa** (Cung thủ, Tín đồ Tu La, Hi no Ou, Yamikage) sẽ bắn
+  đạn bay về phía bạn khi bạn trong tầm và nhìn thấy được. Đạn bay sẽ biến mất khi chạm tường;
+  né hoặc đỡ vẫn giảm/tránh được sát thương của đạn.
+- **Đỡ và né của địch**: Ronin, Vong linh, Bóng kiếm và một số boss có tỉ lệ đỡ đòn
+  (đòn của bạn chỉ còn 1/5 sát thương) và tỉ lệ né đòn (đòn của bạn trượt hoàn toàn).
+  Với địch hay đỡ, hãy dùng đánh mạnh, parry hoặc Nhất Đao Trảm thay vì chém nhẹ liên tục.
+- **Rơi đồ**: địch thường có 30% rơi băng gạc tại chỗ khi chết; boss rơi thuốc hồi máu.
+
+| Địch | Máu | Tấn công | Giáp | Tốc độ | Đặc điểm |
+| --- | --- | --- | --- | --- | --- |
+| Sơn tặc | 45 | 9 | 2 | 2,2 | Địch cơ bản, cận chiến |
+| Cung thủ | 35 | 11 | 1 | 2,3 | Bắn đạn xa, tầm 10 ô |
+| Bạo đồ | 110 | 17 | 5 | 1,8 | Chậm, khỏe, chém mạnh |
+| Vong linh | 55 | 16 | 4 | 3,2 | Nhanh, tỉ lệ né 25% |
+| Ronin du thủ | 95 | 18 | 8 | 2,6 | Đỡ 30%, né 20% |
+| Tín đồ Tu La | 120 | 16 | 6 | 2,5 | Bắn đạn lửa từ xa |
+| Quỷ khiên thủ | 220 | 20 | 14 | 1,9 | Rất trâu, giáp cao |
+| Bóng kiếm | 110 | 18 | 6 | 3,0 | Đỡ 20%, né 30%, đòn bóng tối |
+
+Các chỉ số trên là chỉ số đã cân bằng lại cho bản Java (không sao chép nguyên xi
+chỉ số gốc của bản web, vì máu người chơi và nhịp đánh trong bản Java khác).
+
+### 5.4. Boss và chuyển pha
+
+Boss có thanh máu riêng ở giữa phía trên màn hình. Khi máu boss xuống dưới 60%,
+boss **chuyển pha**: triệu hồi 2 tay chân và (ở một số boss) tăng tốc. Khi máu xuống
+dưới 30%, boss **nổi giận**: tốc độ × 1,2 và tấn công × 1,2. Hạ boss xong vẫn phải
+hoàn thành các nhiệm vụ còn lại của màn (nếu có) rồi mới qua màn.
+
+| Boss | Máu | Tấn công | Giáp | Triệu hồi ở pha 2 |
+| --- | --- | --- | --- | --- |
+| Kurogane - Vua Sơn Tặc (chương 4) | 300 | 18 | 6 | 2 Sơn tặc |
+| Kagemune - Kiếm Khách Bóng (chương 5) | 350 | 20 | 8 | 2 Ronin |
+| Hi no Ou - Vua Tu La (chương 6) | 400 | 22 | 10 | 2 Tín đồ Tu La, bắn đạn lửa |
+| Gashadokuro - Tướng Quỷ (chương 7) | 450 | 24 | 14 | 2 Quỷ khiên thủ |
+| Yamikage - Mạc Phủ Bóng Tối (chương 8, boss cuối) | 500 | 24 | 12 | 2 Bóng kiếm, bắn đạn bóng tối |
+
+### 5.5. Màn chơi và nhiệm vụ
+
+| Chương | Tên màn | Nhiệm vụ | Thưởng khi qua màn |
+| --- | --- | --- | --- |
+| 1 | Bờ Rào Sương Mù | Trừ khử sơn tặc (3); Đến cổng làng Hạc Bạch | 80 XP, 40 vàng |
+| 2 | Làng Hạc Bạch | Hạ bạo đồ chỉ huy (1); Đánh tan sơn tặc (3) | 150 XP, 80 vàng |
+| 3 | Rừng Tre Mật | Chặt tre già (5); Tiêu diệt vong linh (3) | 200 XP, 100 vàng |
+| 4 | Đền Hoang | Dọn sơn tặc giữ đền (2); Hạ Kurogane | 420 XP, 250 vàng |
+| 5 | Sân Đấu Ronin | Đấu đơn với ronin (2); Hạ Kagemune | 620 XP, 400 vàng |
+| 6 | Sườn Núi Tu La | Hạ tín đồ Tu La (2); Khai quặng sắt (3); Hạ Hi no Ou | 900 XP, 600 vàng |
+| 7 | Thành Bóng Tối | Hạ quỷ khiên thủ (1); Hạ Gashadokuro | 1300 XP, 850 vàng |
+| 8 | Mạc Phủ Bóng Tối | Hạ bóng kiếm (2); Hạ Yamikage | 2200 XP, 1500 vàng, màn hình chiến thắng |
+
+Nhiệm vụ “giết” chỉ tính khi chính bạn hạ đúng loại địch đó. Nhiệm vụ “thu thập”
+chỉ tính khi bạn đi qua và nhặt đúng vật phẩm đó (tre, quặng sắt). Nhiệm vụ “đến cổng”
+chỉ tính khi bạn đứng gần cổng Torii sau khi các nhiệm vụ khác đã xong; nếu chưa xong,
+game sẽ hiện danh sách nhiệm vụ còn thiếu thay vì cho qua màn.
+
+### 5.6. Vật phẩm, túi đồ và chế tạo
+
+Đi qua vật phẩm là nhặt được ngay (trừ đài hồi sinh và cổng Torii cần tương tác/đến gần
+theo cách riêng ở trên). Bấm **Tab** để xem túi đồ.
+
+| Vật phẩm | Cách có | Tác dụng |
+| --- | --- | --- |
+| Băng gạc | Nhặt trong màn, địch rơi, chế tạo | Bấm 1: hồi 30 máu |
+| Thuốc hồi máu | Nhặt trong màn, boss rơi | Bấm 2: hồi 60 máu |
+| Tre | Nhặt trong màn (chủ yếu chương 3) | Nguyên liệu chế tạo băng gạc; tính cho nhiệm vụ chương 3 |
+| Thảo dược | Nhặt trong màn | Nguyên liệu chế tạo băng gạc |
+| Quặng sắt | Nhặt trong màn (chủ yếu chương 6) | Nguyên liệu rèn kiếm; tính cho nhiệm vụ chương 6 |
+| Vàng | Hạ địch, thưởng qua màn | Chỉ hiển thị và tích lũy trong bản Java này (chưa có cửa hàng mua bán) |
+| Kiếm | Bắt đầu ở cấp 1 | Tăng sát thương khi lên cấp và khi rèn |
+
+**Chế tạo (bấm C):**
+
+- **2 tre + 1 thảo dược → 1 băng gạc.**
+- Nếu không đủ nguyên liệu làm băng gạc nhưng có **3 quặng sắt → rèn kiếm**:
+  kiếm lên 1 cấp, sát thương +5, tiêu 3 quặng sắt.
+- Nếu không đủ cả hai, game sẽ hiện công thức cần thiết. Chế tạo ưu tiên băng gạc trước,
+  rồi mới rèn kiếm.
+
+### 5.7. Lên cấp và tiến trình
+
+- Hạ địch và qua màn đều cho XP và vàng.
+- Đủ XP sẽ **lên cấp**: máu tối đa +10 (và hồi đầy máu), sát thương +2, ngưỡng XP cho
+  cấp tiếp theo = 100 × cấp hiện tại. Ví dụ: từ cấp 1 lên cấp 2 cần 100 XP, từ cấp 2
+  lên cấp 3 cần 200 XP nữa.
+- Tiến trình được lưu vào `samurai_save.txt` khi: bấm F5, dùng đài hồi sinh, hoặc qua màn.
+  File lưu gồm: chương hiện tại, máu/máu tối đa, cấp, XP, ngưỡng XP, vàng, sát thương,
+  cấp kiếm và số lượng từng vật phẩm. File lưu hỏng hoặc thiếu trường sẽ bị bỏ qua
+  và menu sẽ báo không tìm thấy file lưu hợp lệ, thay vì làm game crash.
+
+### 5.8. Giao diện (HUD)
+
+- Góc trái trên: máu (thanh đỏ), khí lực (thanh vàng), cấp/XP/vàng/sát thương/cấp kiếm,
+  danh sách nhiệm vụ của màn.
+- Giữa trên: thanh máu boss khi boss còn sống trong màn.
+- Góc phải trên: bản đồ mini.
+- Giữa dưới: thông báo trong game (nhặt đồ, hạ địch, parry, lên cấp, chưa xong nhiệm vụ…),
+  hiện khoảng 3,5 giây.
+- Dưới cùng: dòng nhắc phím tắt.
+- Màn hình menu, tạm dừng, gục ngã, hoàn thành màn và chiến thắng đều có hướng dẫn
+  phím bấm ngay trên màn hình, không cần nhớ hết từ README.
+
+## 6. Cấu trúc mã nguồn
+
+```
+src/main/java/vn/samurai/
+├── Main.java       # Mở cửa sổ game (JFrame), chạy trên luồng giao diện Swing
+├── GamePanel.java  # Vòng lặp game, raycasting, vẽ HUD/minimap, input, AI địch, đạn, boss pha
+├── Levels.java     # Dữ liệu 8 chương: bản đồ dạng lưới ký tự, nhiệm vụ, thưởng, màu trời/sàn
+├── Level.java      # Một chương: đọc bản đồ, tường/cây, tầm nhìn, mục tiêu, boss còn sống
+├── Enemy.java      # Dữ liệu địch và boss: máu, tấn công, giáp, tốc độ, tầm nhìn, tỉ lệ đỡ/né
+├── Player.java     # Người chơi: máu, khí lực, cấp/XP, vàng, túi đồ, chế tạo
+├── Combat.java     # Công thức sát thương: giáp, chí mạng, đỡ, parry (dùng chung cho game và kiểm tra)
+├── SaveData.java   # Lưu/tải file samurai_save.txt dạng key=value, bỏ qua file hỏng
+└── Sprite.java     # Vật phẩm, cổng Torii và đài hồi sinh trong thế giới game
 ```
 
-Khuyến nghị deploy:
-- Đặt nginx/Caddy phía trước,终止 HTTPS, proxy về uvicorn (socket unix), cache
-  `web/dist/*` dài hạn (bundle có tên cố định — bump version khi release).
-- Rollback: giữ lại bản `web/dist` + image/code trước đó; backend không stateful ngoài
-  `samurai.db` — backup file `samurai.db` (SQLite) định kỳ là đủ.
-- Không có bí mật nào trong frontend (không key, không token); API save không yêu cầu auth
-  vì game đơn người cục bộ — nếu mở public, thêm rate-limit ở reverse proxy.
+Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn đi lại), `.` sàn trống,
+`P` điểm bắt đầu, `G` cổng Torii, `S` đài hồi sinh, `i` băng gạc, `d` thuốc hồi máu,
+`t` tre, `h` thảo dược, `o` quặng sắt, `g` sơn tặc, `a` cung thủ, `b` bạo đồ, `w` vong linh,
+`r` ronin, `u` tín đồ Tu La, `n` quỷ khiên thủ, `s` bóng kiếm, `K` Kurogane, `M` Kagemune,
+`H` Hi no Ou, `O` Gashadokuro, `Y` Yamikage.
 
-## 6. Tài nguyên & giấy phép
+## 7. Giới hạn đã biết (minh bạch)
 
-- Mã nguồn dự án: viết mới trong repo này.
-- `three` (MIT), `esbuild` (MIT), FastAPI/uvicorn (MIT/BSD) — npm/pip tự tải theo license riêng.
-- Mọi mesh/animation/texture canvas/âm thanh WebAudio: **procedural, tự tạo**, không bản quyền ngoài.
+- Đồ họa là raycasting 2,5D, nhân vật/vật phẩm vẽ bằng hình khối và đường nét cơ bản,
+  không phải mô hình 3D low-poly như bản web Three.js.
+- Không có âm nhạc nền và hiệu ứng âm thanh đầy đủ; chỉ có tiếng bíp khi bị thương.
+- Không có multiplayer, không có server, không có cửa hàng mua bán, không có cây kỹ năng
+  15 node và hệ phe phái đầy đủ như bản web. Kỹ năng trong bản Java chỉ có Nhất Đao Trảm (U).
+- Không có nhảy (Space) và đổi góc nhìn thứ nhất/thứ ba như bản web; bản Java chỉ có
+  góc nhìn thứ nhất và né bằng phím I.
+- Vàng hiện chỉ để tích lũy và hiển thị, chưa dùng để mua đồ.
+- Hiệu năng phụ thuộc vào máy chạy Java/Swing; game dùng Timer 60 khung hình/giây và
+  không cam kết 60 FPS trên mọi máy.
 
-## 7. Giới hạn đã biết
+## 8. Kiểm tra nhanh sau khi chạy
 
-- Nhân vật/cảnh là low-poly cách điệu (procedural), không thay thế được asset AAA.
-- Camera góc thứ nhất ẩn thân nhân vật (chuẩn web game nhỏ).
-- Vật lý: heightfield + collider tròn (không có ragdoll/dịch chuyển vật lý phức tạp).
-- Server không chống gian lận (client-authoritative) — phù hợp game đơn người.
-- Âm nhạc nền là koto procedural đơn giản; không có voice/dialogue.
+1. Menu hiện ra, bấm Enter vào chương 1.
+2. Dùng W/A/S/D di chuyển và xoay, Q/E lách sang, nhìn thấy tường, cây và bản đồ mini.
+3. Đến gần sơn tặc, bấm J để chém, giữ L để đỡ, bấm I để né.
+4. Nhặt tre/băng gạc bằng cách đi qua vật phẩm, bấm Tab xem túi đồ, bấm C để chế tạo
+   khi đủ nguyên liệu.
+5. Hoàn thành nhiệm vụ góc trái trên, đi đến cổng Torii đỏ, bấm N để sang màn tiếp.
+6. Bấm F5 để lưu, thoát game, chạy lại và bấm L ở menu để tiếp tục từ chương đã lưu.
