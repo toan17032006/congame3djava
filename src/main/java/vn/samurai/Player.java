@@ -26,6 +26,13 @@ public class Player {
     public double xpGainMul = 0;
     public boolean windstepBonus = false;
     public double ironwillTimer = 0;
+    public int villagerTalked = 0;
+    public java.util.Set<String> talkedNpcs = new java.util.HashSet<>();
+
+    /** Shop discount from villager reputation: 5% per villager talked to, max 20%. */
+    public int shopDiscountPct() {
+        return Math.min(20, villagerTalked * 5);
+    }
 
     public Player() {
         hp = maxHp;

@@ -14,6 +14,8 @@ public class SaveData {
     public int skillPoints = 0;
     public int maxStamina = 100;
     public String skillsCsv = "";
+    public int villagerTalked = 0;
+    public String talkedCsv = "";
 
     public static void save(Player p, int levelIndex, File file) throws IOException {
         String text = "levelIndex=" + levelIndex + "\n"
@@ -22,7 +24,9 @@ public class SaveData {
                 + "\nkatanaLevel=" + p.katanaLevel + "\nbandage=" + p.bandage + "\ndraught=" + p.draught
                 + "\nbamboo=" + p.bamboo + "\nherb=" + p.herb + "\niron=" + p.iron
                 + "\nskillPoints=" + p.skillPoints + "\nmaxStamina=" + p.maxStamina
-                + "\nskills=" + String.join(",", p.skills) + "\n";
+                + "\nskills=" + String.join(",", p.skills)
+                + "\nvillagerTalked=" + p.villagerTalked
+                + "\ntalked=" + String.join(",", p.talkedNpcs) + "\n";
         Files.writeString(file.toPath(), text, StandardCharsets.UTF_8);
     }
 
@@ -32,11 +36,14 @@ public class SaveData {
             if (!file.exists()) return null;
             Map<String, Integer> m = new HashMap<>();
             String skillsCsv = "";
+            String talkedCsv = "";
             for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
                 String[] kv = line.split("=", 2);
                 if (kv.length != 2) continue;
                 if (kv[0].trim().equals("skills")) {
                     skillsCsv = kv[1].trim();
+                } else if (kv[0].trim().equals("talked")) {
+                    talkedCsv = kv[1].trim();
                 } else {
                     try {
                         m.put(kv[0].trim(), Integer.parseInt(kv[1].trim()));
@@ -63,6 +70,8 @@ public class SaveData {
             s.skillPoints = m.getOrDefault("skillPoints", 0);
             s.maxStamina = m.getOrDefault("maxStamina", 100);
             s.skillsCsv = skillsCsv;
+            s.villagerTalked = m.getOrDefault("villagerTalked", 0);
+            s.talkedCsv = talkedCsv;
             if (s.maxHp <= 0 || s.level <= 0 || s.levelIndex < 0) return null;
             return s;
         } catch (Exception e) {
@@ -92,6 +101,13 @@ public class SaveData {
         p.iron = iron;
         p.maxStamina = maxStamina;
         p.stamina = maxStamina;
+        p.villagerTalked = villagerTalked;
+        p.talkedNpcs.clear();
+        if (talkedCsv != null && !talkedCsv.isEmpty()) {
+            for (String id : talkedCsv.split(",")) {
+                if (!id.trim().isEmpty()) p.talkedNpcs.add(id.trim());
+            }
+        }
         p.skillPoints = skillPoints;
         p.skills.clear();
         if (skillsCsv != null && !skillsCsv.isEmpty()) {

@@ -25,6 +25,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import vn.samurai.Combat;
 import vn.samurai.Enemy;
+import vn.samurai.Npc;
 import vn.samurai.Level;
 import vn.samurai.Levels;
 import vn.samurai.Player;
@@ -618,6 +619,12 @@ public class SamuraiScreen implements Screen {
     private void completeLevel() {
         boolean leveled = player.addXp(level.rewardXp);
         player.coins += level.rewardCoins;
+        boolean allyAlive = false;
+        for (Npc npc : level.npcs) if (npc.isAlly && npc.body.alive()) allyAlive = true;
+        if (allyAlive) {
+            player.coins += 50;
+            setMessage("Đồng minh còn sống: +50 vàng thưởng!");
+        }
         saveGameQuiet();
         if (audio != null) {
             audio.play("gate");
@@ -746,25 +753,28 @@ public class SamuraiScreen implements Screen {
     }
 
     private void buyShopItem(int idx) {
-        String name;
-        int price;
-        boolean ok = false;
+        String[] names = {"Băng gạc", "Thuốc hồi máu", "Tre", "Thảo dược", "Quặng sắt", "Rèn kiếm +5 sát thương"};
+        int[] base = {50, 120, 20, 20, 80, 600};
+        if (idx < 0 || idx >= names.length) return;
+        int disc = player.shopDiscountPct();
+        int price = base[idx] * (100 - disc) / 100;
+        if (player.coins < price) {
+            setMessage("Không đủ vàng! Cần " + price + " vàng (đã giảm " + disc + "%), bạn có " + player.coins + " vàng.");
+            return;
+        }
+        player.coins -= price;
         switch (idx) {
-            case 0: name = "Băng gạc"; price = 50; if (player.coins >= price) { player.coins -= price; player.bandage++; ok = true; } break;
-            case 1: name = "Thuốc hồi máu"; price = 120; if (player.coins >= price) { player.coins -= price; player.draught++; ok = true; } break;
-            case 2: name = "Tre"; price = 20; if (player.coins >= price) { player.coins -= price; player.bamboo++; ok = true; } break;
-            case 3: name = "Thảo dược"; price = 20; if (player.coins >= price) { player.coins -= price; player.herb++; ok = true; } break;
-            case 4: name = "Quặng sắt"; price = 80; if (player.coins >= price) { player.coins -= price; player.iron++; ok = true; } break;
-            case 5: name = "Rèn kiếm +5 sát thương"; price = 600; if (player.coins >= price) { player.coins -= price; player.katanaLevel++; player.damage += 5; ok = true; } break;
-            default: name = ""; price = 0; break;
+            case 0: player.bandage++; break;
+            case 1: player.draught++; break;
+            case 2: player.bamboo++; break;
+            case 3: player.herb++; break;
+            case 4: player.iron++; break;
+            case 5: player.katanaLevel++; player.damage += 5; break;
+            default: break;
         }
-        if (ok) {
-            if (audio != null) audio.play("coin");
-            saveGameQuiet();
-            setMessage("Đã mua: " + name + " (" + price + " vàng). Còn " + player.coins + " vàng.");
-        } else {
-            setMessage("Không đủ vàng! Cần " + price + " vàng, bạn có " + player.coins + " vàng.");
-        }
+        if (audio != null) audio.play("coin");
+        saveGameQuiet();
+        setMessage("Đã mua: " + names[idx] + " (" + price + " vàng). Còn " + player.coins + " vàng.");
     }
 
     private void tryWhirlwind() {
@@ -853,6 +863,39 @@ public class SamuraiScreen implements Screen {
             player.y = ny;
         }
         setMessage("Né! Bất khả xâm phạm trong chốc lát.");
+    }
+
+    private void interact() {
+        // Talk to the nearest NPC first (within 1.5 cells), otherwise use a shrine.
+        Npc nearest = null;
+        double best = 1.5;
+        for (Npc npc : level.npcs) {
+            double d = Math.hypot(npc.x - player.x, npc.y - player.y);
+            if (d < best) {
+                best = d;
+                nearest = npc;
+            }
+        }
+        if (nearest != null) {
+            String line = nearest.talk();
+            if (nearest.isAlly) {
+                setMessage(nearest.name + ": \"" + line + "\"");
+                if (audio != null) audio.play("ui");
+            } else {
+                boolean first = !player.talkedNpcs.contains(nearest.id);
+                if (first) {
+                    player.talkedNpcs.add(nearest.id);
+                    player.villagerTalked++;
+                    player.coins += 50;
+                    player.bandage++;
+                    saveGameQuiet();
+                }
+                setMessage(nearest.name + ": \"" + line + "\"" + (first ? " (+50 vàng, +1 băng gạc, giảm giá cửa hàng +" + player.shopDiscountPct() + "%)" : ""));
+                if (audio != null) audio.play("quest");
+            }
+            return;
+        }
+        interactShrine();
     }
 
     private void interactShrine() {
@@ -957,6 +1000,7 @@ public class SamuraiScreen implements Screen {
         }
 
         updateEnemies(dt);
+        updateAllies(dt);
         updateProjectiles(dt);
         pickupItems();
         checkGoal();
@@ -999,6 +1043,68 @@ public class SamuraiScreen implements Screen {
         double r = 0.18;
         return !level.isWallAt(x - r, y - r) && !level.isWallAt(x + r, y - r)
                 && !level.isWallAt(x - r, y + r) && !level.isWallAt(x + r, y + r);
+    }
+
+    private void updateAllies(double dt) {
+        for (Npc npc : level.npcs) {
+            if (!npc.isAlly) continue;
+            Enemy a = npc.body;
+            if (!a.alive()) continue;
+            if (a.cooldownTimer > 0) a.cooldownTimer -= dt;
+            // Find nearest alive enemy with line of sight.
+            Enemy target = null;
+            double best = 10;
+            for (Enemy e : level.enemies) {
+                if (!e.alive()) continue;
+                double d = Math.hypot(e.x - a.x, e.y - a.y);
+                if (d < best && level.hasLineOfSight(a.x, a.y, e.x, e.y)) {
+                    best = d;
+                    target = e;
+                }
+            }
+            if (target != null) {
+                a.useFaceTarget = true;
+                a.faceX = target.x;
+                a.faceY = target.y;
+                if (best > a.attackRange) {
+                    a.state = Enemy.CHASE;
+                    double nx = a.x + (target.x - a.x) / best * a.speed * dt;
+                    double ny = a.y + (target.y - a.y) / best * a.speed * dt;
+                    if (!level.isWallAt(nx - 0.18, a.y - 0.18) && !level.isWallAt(nx + 0.18, a.y + 0.18)) a.x = nx;
+                    if (!level.isWallAt(a.x - 0.18, ny - 0.18) && !level.isWallAt(a.x + 0.18, ny + 0.18)) a.y = ny;
+                    npc.x = a.x;
+                    npc.y = a.y;
+                } else if (a.cooldownTimer <= 0) {
+                    a.state = Enemy.COOLDOWN;
+                    a.cooldownTimer = a.cooldownTime;
+                    int dmg = Math.max(1, a.attack - target.defense);
+                    target.hp -= dmg;
+                    spawnParticles(target.x, 1.0, target.y, Color.CYAN, 8);
+                    if (target.hp <= 0) killEnemy(target);
+                }
+            } else {
+                // No enemy: follow the player, staying a little behind.
+                double d = Math.hypot(player.x - a.x, player.y - a.y);
+                a.useFaceTarget = true;
+                a.faceX = player.x;
+                a.faceY = player.y;
+                if (d > 2.5) {
+                    a.state = Enemy.CHASE;
+                    double nx = a.x + (player.x - a.x) / d * a.speed * dt;
+                    double ny = a.y + (player.y - a.y) / d * a.speed * dt;
+                    if (!level.isWallAt(nx, a.y)) a.x = nx;
+                    if (!level.isWallAt(a.x, ny)) a.y = ny;
+                    npc.x = a.x;
+                    npc.y = a.y;
+                } else {
+                    a.state = Enemy.IDLE;
+                }
+            }
+            // Ally can be hurt by enemies? Enemies target the player only in
+            // this game, so allies are unkillable helpers (by design, to avoid
+            // losing a quest helper to a stray arrow). Their HP is shown only
+            // in the rig, not as a damageable target.
+        }
     }
 
     private void updateEnemies(double dt) {
@@ -1243,7 +1349,7 @@ public class SamuraiScreen implements Screen {
         else if (justPressed(Keys.K)) tryAttack(2);
         else if (justPressed(Keys.U)) tryAttack(3);
         else if (justPressed(Keys.I)) tryDodge();
-        else if (justPressed(Keys.F)) interactShrine();
+        else if (justPressed(Keys.F)) interact();
         else if (justPressed(Keys.C)) tryCraft();
         else if (justPressed(Keys.NUM_1)) {
             if (player.useBandage()) setMessage("Dùng băng gạc, hồi 30 máu.");
@@ -1344,6 +1450,19 @@ public class SamuraiScreen implements Screen {
                 if (start != null) {
                     double prog = (gameTime - start) / 0.8;
                     if (prog >= 0 && prog < 1) renderEnemyRig(e, (float) prog, true);
+                }
+            }
+        }
+
+        for (Npc npc : level.npcs) {
+            Enemy body = npc.body;
+            if (body.alive()) {
+                renderEnemyRig(body, 0, false);
+            } else {
+                Double start = deathTimes.get(body);
+                if (start != null) {
+                    double prog = (gameTime - start) / 0.8;
+                    if (prog >= 0 && prog < 1) renderEnemyRig(body, (float) prog, true);
                 }
             }
         }
@@ -1462,7 +1581,12 @@ public class SamuraiScreen implements Screen {
      * Parts are cached per enemy; only their transforms change per frame.
      */
     private void renderEnemyRig(Enemy e, float deathProg, boolean dead) {
-        float yaw = (float) Math.toDegrees(Math.atan2(player.x - e.x, player.y - e.y));
+        float yaw;
+        if (e.useFaceTarget) {
+            yaw = (float) Math.toDegrees(Math.atan2(e.faceX - e.x, e.faceY - e.y));
+        } else {
+            yaw = (float) Math.toDegrees(Math.atan2(player.x - e.x, player.y - e.y));
+        }
         float scale = (float) e.scale;
         float walkPhase = (float) (gameTime * e.speed * 2.5 + e.x * 10);
         float legSwing = 0, armSwing = 0, lean = 0, headTilt = 0, bob = 0, armRPitch = 0, armLPitch = 0;
@@ -1514,8 +1638,15 @@ public class SamuraiScreen implements Screen {
         placePart(parts[7], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, 0.16f, 0, 0, legSwing, 0, 0, -0.35f, 0);
         placePart(parts[8], (float) e.x, 0.85f * scale + yBase, (float) e.y, yaw, scale, -0.16f, 0, 0, -legSwing, 0, 0, -0.35f, 0);
         // Sword follows the right arm: hand at shoulder + arm pitch, blade tilted forward.
-        placePart(parts[9], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.12f);
-        placePart(parts[10], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch, 0, 0, -0.5f, 0.05f);
+        if (e.kind.equals("villager")) {
+            // Villagers carry no sword: hide both sword parts underground.
+            placePart(parts[9], (float) e.x, -10f, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.12f);
+            placePart(parts[10], (float) e.x, -10f, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch, 0, 0, -0.5f, 0.05f);
+            placePart(parts[27], (float) e.x, -10f, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.13f);
+        } else {
+            placePart(parts[9], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.12f);
+            placePart(parts[10], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch, 0, 0, -0.5f, 0.05f);
+        }
         place(parts[11], (float) e.x, 0.02f, (float) e.y, 0, scale);
         // Humanoid v2 details, following torso/head/leg transforms.
         boolean armour = hasArmour(e);
@@ -1540,8 +1671,10 @@ public class SamuraiScreen implements Screen {
         placePart(parts[25], (float) e.x, 1.52f * scale + yBase, (float) e.y, yaw, scale, 0, -0.03f, 0.20f, headTilt, 0, 0, 0, 0);
         // Saya (scabbard) on the back, diagonal.
         placePart(parts[26], (float) e.x, 1.20f * scale + yBase, (float) e.y, yaw, scale, -0.30f, 0, -0.22f, lean, -25f, 0, 0, 0);
-        // Hamon edge along the blade.
-        placePart(parts[27], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.13f);
+        // Hamon edge along the blade (already hidden for villagers above).
+        if (!e.kind.equals("villager")) {
+            placePart(parts[27], (float) e.x, 1.38f * scale + yBase, (float) e.y, yaw, scale, 0.42f, 0, 0, armRPitch - 55f, 0, 0, -0.6f, 0.13f);
+        }
         for (ModelInstance inst : parts) modelBatch.render(inst, environment);
         if (e.state == Enemy.WINDUP) {
             ModelInstance flash = new ModelInstance(boxSmallModel);
@@ -1731,13 +1864,15 @@ public class SamuraiScreen implements Screen {
     private void drawShop() {
         String[] names = {"Băng gạc", "Thuốc hồi máu", "Tre", "Thảo dược", "Quặng sắt", "Rèn kiếm +5 sát thương"};
         int[] prices = {50, 120, 20, 20, 80, 600};
+        int disc = player.shopDiscountPct();
+        for (int i = 0; i < prices.length; i++) prices[i] = prices[i] * (100 - disc) / 100;
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(0, 0, 0, 0.75f);
         shapes.rect(140, 140, W - 280, H - 280);
         shapes.end();
         batch.begin();
         textCentered(bigFont, "CỬA HÀNG", 170);
-        text(font, "Vàng của bạn: " + player.coins + "  |  W/S hoặc ↑/↓ chọn, Enter mua, B/Esc đóng", 160, 210);
+        text(font, "Vàng của bạn: " + player.coins + "  |  Giảm giá uy tín dân làng: " + player.shopDiscountPct() + "%  |  W/S chọn, Enter mua, B/Esc đóng", 160, 210);
         int y = 240;
         for (int i = 0; i < names.length; i++) {
             String sel = (i == shopSelection) ? ">> " : "   ";

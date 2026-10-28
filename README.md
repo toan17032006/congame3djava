@@ -19,6 +19,60 @@ tiếng chém/đỡ/parry/nhặt đồ…). Không cần file ảnh hay file nh�
 > của bản Swing, chỉ thay phần hiển thị và input bằng LibGDX. Bản Swing cũ vẫn còn trong
 > lịch sử git ở commit `80555ad`, bản web gốc còn ở commit `ec46715`, nếu bạn muốn xem lại.
 
+## 0. Cách chạy nhanh nhất (đọc trước khi chạy)
+
+### Windows (cách dễ nhất: nhấp đúp)
+
+1. **Cài JDK 17 trở lên** nếu máy chưa có. Tải Temurin miễn phí tại
+   https://adoptium.net/ , chọn JDK 17 (hoặc mới hơn), cài đặt bình thường.
+   Kiểm tra bằng cách mở PowerShell và gõ `java -version` — phải hiện
+   `17` trở lên, không được báo lỗi.
+2. **Tải game về máy** bằng một trong hai cách:
+   - Dùng git: mở PowerShell, gõ
+     `git clone https://github.com/toan17032006/congame3djava.git`
+   - Không dùng git: vào trang GitHub của repo, bấm nút xanh **Code** →
+     **Download ZIP**, giải nén ra một thư mục.
+3. **Vào thư mục game** (thư mục chứa file `run.bat` và `gradlew.bat`),
+   **nhấp đúp file `run.bat`**. Cửa sổ game sẽ mở sau khi tải xong.
+   - Nếu thích gõ lệnh thay vì nhấp đúp: mở PowerShell **tại thư mục game**
+     (gõ `cd` tới thư mục đó, hoặc Shift + chuột phải → Open PowerShell here),
+     rồi gõ `.\run.bat` hoặc `.\gradlew.bat run`.
+   - **Lần đầu tiên** cần mạng và có thể mất vài phút vì Gradle sẽ tải
+     Gradle 8.5 và LibGDX 1.12.1 về máy. Đừng tắt cửa sổ trong lúc tải.
+     Các lần sau chạy nhanh hơn vì đã có cache.
+4. Ở menu chính: **Enter** chơi mới, **L** tiếp tục từ file lưu (nếu có),
+   **Esc** thoát game.
+
+### Linux / macOS
+
+1. Cài JDK 17 trở lên (ví dụ: `sudo apt install openjdk-17-jdk` trên Ubuntu,
+   hoặc Temurin tại https://adoptium.net/ ).
+2. Tải game như trên (`git clone` hoặc Download ZIP rồi giải nén).
+3. Vào thư mục game, gõ:
+   ```bash
+   chmod +x run.sh
+   ./run.sh
+   ```
+   hoặc trực tiếp `./gradlew run`.
+
+### Nếu gặp lỗi
+
+| Lỗi / hiện tượng | Cách sửa |
+| --- | --- |
+| `java` is not recognized / không tìm thấy Java | Chưa cài JDK, hoặc cài xong chưa mở lại PowerShell. Cài JDK 17+ rồi mở lại cửa sổ lệnh và gõ `java -version` để kiểm tra. |
+| `gradlew` is not recognized / không tìm thấy file | Bạn đang đứng sai thư mục. Phải đứng ở thư mục gốc của repo (thư mục chứa `run.bat`, `gradlew.bat`, `README.md`), không phải trong `src` hay trong thư mục con khác. |
+| Tải Gradle/LibGDX rất lâu, hoặc báo lỗi mạng | Lần đầu cần mạng. Kiểm tra mạng, chờ thêm, rồi chạy lại lệnh — Gradle sẽ tiếp tục từ chỗ đã tải, không tải lại từ đầu. |
+| Cửa sổ game đen một lúc rồi mới hiện menu | Bình thường ở lần đầu: game đang tạo nhạc và tải font. Chờ vài giây, đừng tắt. |
+| Cảnh báo ALSA / không có tiếng | Chỉ xảy ra trên máy không có card âm thanh (ví dụ máy ảo). Trên máy Windows bình thường sẽ có tiếng, bấm **F6** để bật/tắt nhạc. |
+| Không thấy file lưu cũ | File lưu là `samurai_save.txt`, nằm trong cùng thư mục bạn chạy game (thư mục làm việc khi gõ lệnh). Nếu bạn chạy từ thư mục khác, game sẽ không thấy file lưu cũ. Hãy chạy từ thư mục gốc của repo. |
+| Lỗi cũ `vn.samurai.Main` không tìm thấy | Đó là lệnh của bản Swing cũ, đã bỏ. Bản hiện tại chạy bằng Gradle, class chính là `vn.samurai.gdx.DesktopLauncher`, bạn không cần gõ `java` thủ công. |
+
+### Chạy nhanh bằng lệnh (tóm tắt)
+
+- Windows (PowerShell, tại thư mục game): `.\gradlew.bat run`
+- Linux/macOS (tại thư mục game): `./gradlew run`
+- Hoặc nhấp đúp `run.bat` (Windows) / chạy `./run.sh` (Linux/macOS).
+
 ## 1. Yêu cầu
 
 - JDK 17 trở lên (đã kiểm tra với JDK 17.0.21).
@@ -71,7 +125,7 @@ Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy l�
 | U | Kỹ năng đặc biệt: Nhất Đao Trảm |
 | L (giữ) | Đỡ đòn. **Nhấn L đúng lúc đòn địch chạm tới (trong 0,25 giây) = Parry** |
 | I | Né (lao về trước, bất khả xâm phạm 0,4 giây) |
-| F | Tương tác đài hồi sinh khi đứng gần đài |
+| F | Nói chuyện với NPC gần đó (dân làng/đồng minh) hoặc tương tác đài hồi sinh khi đứng gần đài |
 | 1 | Dùng băng gạc (hồi 30 máu) |
 | 2 | Dùng thuốc hồi máu (hồi 60 máu) |
 | C | Chế tạo (xem mục 6) |
@@ -299,6 +353,30 @@ theo cách riêng ở trên). Bấm **Tab** để xem túi đồ.
 - Màn hình menu, tạm dừng, gục ngã, hoàn thành màn và chiến thắng đều có hướng dẫn
   phím bấm ngay trên màn hình, không cần nhớ hết từ README.
 
+### 5.8b. NPC, phe phái và uy tín (như bản web)
+
+Bản web có dân làng, samurai đồng minh và hệ phe phái (samurai, dân làng,
+sơn tặc, ronin, Tu La, bóng tối, quỷ, vệ thành). Bản này có phiên bản gọn:
+
+- **Dân làng**: đứng ở Làng Hạc Bạch, Đền Hoang và Bờ Rào Sương Mù. Đứng gần
+  (dưới 1,5 ô) và bấm **F** để nói chuyện. Mỗi dân làng chỉ thưởng một lần
+  (lưu vào file lưu, nên chơi lại màn cũng không farm được): **+50 vàng,
+  +1 băng gạc**, và **uy tín dân làng +1**. Nói chuyện lần sau vẫn xem được
+  hội thoại, nhưng không thưởng nữa.
+- **Samurai đồng minh**: ở Làng Hạc Bạch và Đền Hoang. Đồng minh tự đi theo bạn,
+  tự tìm địch gần nhất có tầm nhìn, đánh cùng bạn (sát thương 16, hồi chiêu
+  1,5 giây). Đồng minh hạ địch thì bạn vẫn nhận XP, vàng và tính nhiệm vụ
+  như chính bạn hạ. Nếu đồng minh còn sống khi qua màn, bạn được **+50 vàng
+  thưởng**. Đồng minh không bị địch đánh trúng trong bản này (địch chỉ nhắm
+  vào bạn), nên đồng minh sẽ không chết giữa chừng vì một mũi tên lạc.
+- **Phe phái**: mỗi địch thuộc một phe (sơn tặc, ronin, Tu La, bóng tối, quỷ…),
+  đồng minh thuộc phe samurai, dân làng thuộc phe dân làng. Phe phái hiện
+  chủ yếu để phân biệt đồng minh/dân làng với địch, chưa có hệ thù địch
+  phức tạp như bản web (ví dụ ronin trung lập cho tới khi bị khiêu khích).
+- **Giảm giá cửa hàng theo uy tín**: mỗi dân làng đã nói chuyện cho **5%
+  giảm giá**, tối đa **20%**. Giá trong cửa hàng (bấm **B**) đã tự trừ giảm giá
+  này, ví dụ băng gạc 50 vàng còn 40 vàng khi đã nói chuyện với 4 dân làng.
+
 ### 5.9. Cây kỹ năng (như bản web, 3 nhánh × 5 node)
 
 Mỗi lần lên cấp bạn nhận **1 điểm kỹ năng**. Bấm **O** để mở cây kỹ năng
@@ -358,6 +436,9 @@ src/main/java/vn/samurai/
 │   ├── TextureFactory.java     # Texture procedural bằng Pixmap: đá, đất, cỏ, gỗ, vải, kim loại
 │   ├── AudioManager.java       # Tổng hợp WAV: nhạc koto/taiko, gió, 23 SFX; phát bằng LibGDX
 │   └── SkillTree.java          # Cây kỹ năng 15 node (Đao/Gió/Tâm) như bản web, kèm điều kiện học
+├── Npc.java            # Dân làng và samurai đồng minh (phe phái, hội thoại, thưởng)
+run.bat                         # Windows: nhấp đúp để chạy game (kiểm tra Java rồi gọi gradlew.bat run)
+run.sh                          # Linux/macOS: ./run.sh để chạy game
 ├── Levels.java     # Dữ liệu 8 chương: bản đồ dạng lưới ký tự, nhiệm vụ, thưởng, màu trời/sàn
 ├── Level.java      # Một chương: đọc bản đồ, tường/cây, tầm nhìn, mục tiêu, boss còn sống
 ├── Enemy.java      # Dữ liệu địch và boss: máu, tấn công, giáp, tốc độ, tầm nhìn, tỉ lệ đỡ/né
@@ -382,9 +463,10 @@ Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn �
   hình học lắp ghép, chưa phải mô hình nhân vật low-poly với skeletal animation
   (xương + skinning) và shader PBR + normal-map + bloom/post-processing đầy đủ như
   bản web Three.js, chưa có cỏ instanced hàng nghìn bụi như bản web.
-- Chưa có: 15 màn đầy đủ của bản web (bản này vẫn 8 chương), phe phái, NPC đối thoại,
-  nhiệm vụ sóng (waves) / phòng thủ, và multiplayer/server. Cây kỹ năng và cửa hàng
-  đã có, nhưng phe phái và NPC vẫn chưa có.
+- Chưa có: 15 màn đầy đủ của bản web (bản này vẫn 8 chương), nhiệm vụ sóng
+  (waves) / phòng thủ như bản web, và multiplayer/server. Phe phái, NPC, cây kỹ
+  năng và cửa hàng đã có ở dạng gọn, chưa đầy đủ như bản web (ví dụ ronin
+  trung lập, NPC đi tuần, nhiệm vụ phụ từ NPC).
 - Không có multiplayer, không có server, không có cửa hàng mua bán, không có cây kỹ năng
   15 node và hệ phe phái đầy đủ như bản web. Kỹ năng trong bản Java chỉ có Nhất Đao Trảm (U).
 - Không có nhảy (Space) và đổi góc nhìn thứ nhất/thứ ba như bản web; bản LibGDX chỉ có

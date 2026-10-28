@@ -188,6 +188,30 @@ public final class Levels {
                 new Level.Objective("KILL", "shadow", 2, "Hạ bóng kiếm"),
                 new Level.Objective("BOSS", "boss_yamikage", 1, "Hạ Yamikage - Mạc Phủ Bóng Tối")));
 
+        // NPCs: villagers to talk to (F) and ally samurai who fight with you.
+        // Positions are free floor cells in each map (checked against the grids above).
+        levels.get(0).npcs.add(new Npc("L01_lao_nong", "Lão nông", "villager", 5.5, 4.5, false,
+                "Chào samurai! Đi bằng W/S, xoay bằng A/D.",
+                "Gặp sơn tặc thì bấm J để chém, giữ L để đỡ, bấm I để né.",
+                "Nhặt tre và thảo dược, bấm C để chế băng gạc. Chúc ngươi bình an!"));
+        levels.get(1).npcs.add(new Npc("L02_dan_lang_1", "Dân làng", "villager", 4.5, 2.5, false,
+                "Sơn tặc cướp hết rượu mùa đông của làng rồi!",
+                "Bạo đồ chỉ huy ở gần cổng, cẩn thận đòn mạnh của hắn.",
+                "Cảm ơn ngươi đã đến giúp làng!"));
+        levels.get(1).npcs.add(new Npc("L02_dan_lang_2", "Dân làng", "villager", 15.5, 4.5, false,
+                "Ta giấu ít băng gạc trong làng, ngươi cứ nhặt mà dùng.",
+                "Nói chuyện với dân làng nhiều sẽ được giảm giá ở cửa hàng đấy."));
+        levels.get(1).npcs.add(new Npc("L02_ally", "Samurai đồng minh", "samurai_ally", 6.5, 4.5, true,
+                "Ta sẽ chiến đấu cùng ngươi! Đừng lo phía sau.",
+                "Ronin và sơn tặc đều là kẻ thù của làng, cứ chém thẳng tay!"));
+        levels.get(3).npcs.add(new Npc("L04_thay_tu", "Thầy tu giữ đền", "villager", 5.5, 4.5, false,
+                "Kurogane chiếm đền đã lâu, tượng Phật cũng bị hắn che mất.",
+                "Hắn to lớn nhưng chậm, né rồi parry là hạ được.",
+                "Nếu ngươi hạ được hắn, đền sẽ lại yên bình."));
+        levels.get(3).npcs.add(new Npc("L04_ally", "Samurai đồng minh", "samurai_ally", 3.5, 7.5, true,
+                "Ta canh đền đã nhiều ngày, cuối cùng cũng có người đến.",
+                "Ta sẽ đánh cùng ngươi, Kurogane không dễ gì thắng được hai ta!"));
+
         return levels;
     }
 }

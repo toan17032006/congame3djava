@@ -30,6 +30,7 @@ public class Level {
     public int[][] wall; // 0 floor, 1 wall, 2 tree
     public double startX, startY, startAngle = 0;
     public List<Enemy> enemies = new ArrayList<>();
+    public List<Npc> npcs = new ArrayList<>();
     public List<Sprite> sprites = new ArrayList<>();
     public List<Objective> objectives = new ArrayList<>();
 

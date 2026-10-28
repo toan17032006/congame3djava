@@ -6,7 +6,10 @@ public class Enemy {
     public static final int IDLE = 0, CHASE = 1, WINDUP = 2, COOLDOWN = 3, STUNNED = 4, DEAD = 5;
 
     public String kind, name, bossId = "";
+    public String faction = "bandit";
     public double x, y;
+    public double faceX, faceY;
+    public boolean useFaceTarget = false;
     public int hp, maxHp, attack, defense, xp, coins;
     public double speed, sight, attackRange, cooldownTime;
     public boolean ranged, fire, shadow, boss;
@@ -46,11 +49,22 @@ public class Enemy {
 
     public static Enemy create(String kind, double x, double y) {
         switch (kind) {
+            case "ally": {
+                Enemy e = new Enemy(kind, "Samurai đồng minh", x, y, 90, 16, 8, 2.8, 0, 0, 12, 1.4, 1.5, new RgbColor(42, 74, 106));
+                e.faction = "samurai_ally";
+                return e;
+            }
+            case "villager": {
+                Enemy e = new Enemy(kind, "Dân làng", x, y, 30, 4, 1, 0, 0, 0, 0, 0, 3, new RgbColor(138, 122, 90));
+                e.faction = "villager";
+                return e;
+            }
             case "grunt":
                 return new Enemy(kind, "Sơn tặc", x, y, 45, 9, 2, 2.2, 22, 12, 12, 1.4, 1.6, new RgbColor(90, 70, 50));
             case "archer": {
                 Enemy e = new Enemy(kind, "Cung thủ", x, y, 35, 11, 1, 2.3, 26, 15, 14, 10, 2.6, new RgbColor(74, 90, 58));
                 e.ranged = true;
+                e.faction = "bandit";
                 return e;
             }
             case "brute":
@@ -58,18 +72,21 @@ public class Enemy {
             case "wraith": {
                 Enemy e = new Enemy(kind, "Vong linh", x, y, 55, 16, 4, 3.2, 60, 20, 14, 1.2, 1.1, new RgbColor(48, 64, 74));
                 e.dodgeChance = 0.25;
+                e.faction = "shade";
                 return e;
             }
             case "ronin": {
                 Enemy e = new Enemy(kind, "Ronin du thủ", x, y, 95, 18, 8, 2.6, 70, 45, 14, 1.4, 1.4, new RgbColor(42, 52, 64));
                 e.blockChance = 0.30;
                 e.dodgeChance = 0.20;
+                e.faction = "ronin";
                 return e;
             }
             case "ashura": {
                 Enemy e = new Enemy(kind, "Tín đồ Tu La", x, y, 120, 16, 6, 2.5, 120, 75, 14, 1.4, 1.5, new RgbColor(138, 36, 24));
                 e.ranged = true;
                 e.fire = true;
+                e.faction = "ashura";
                 return e;
             }
             case "oni_shield":
@@ -79,6 +96,7 @@ public class Enemy {
                 e.blockChance = 0.20;
                 e.dodgeChance = 0.30;
                 e.shadow = true;
+                e.faction = "shade";
                 return e;
             }
             case "boss_kurogane": {
@@ -124,6 +142,11 @@ public class Enemy {
         Enemy e = new Enemy(kind, name, x, y, hp, attack, defense, speed, xp, coins, 16, 1.7, 1.6, cloth);
         e.boss = true;
         e.bossId = kind;
+        if (kind.equals("boss_kagemune")) e.faction = "ronin";
+        else if (kind.equals("boss_ashura")) e.faction = "ashura";
+        else if (kind.equals("boss_oni")) e.faction = "oni";
+        else if (kind.equals("boss_yamikage")) e.faction = "shade";
+        else e.faction = "bandit";
         return e;
     }
 }
