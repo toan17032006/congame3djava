@@ -1,6 +1,5 @@
 package vn.samurai;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +25,7 @@ public class Level {
 
     public String id, name, desc;
     public int rewardXp, rewardCoins;
-    public Color ceiling, floor;
+    public RgbColor ceiling, floor;
     public int width, height;
     public int[][] wall; // 0 floor, 1 wall, 2 tree
     public double startX, startY, startAngle = 0;
@@ -35,7 +34,7 @@ public class Level {
     public List<Objective> objectives = new ArrayList<>();
 
     public Level(String id, String name, String desc, int rewardXp, int rewardCoins,
-                 Color ceiling, Color floor, String[] rows, Objective... objectives) {
+                 RgbColor ceiling, RgbColor floor, String[] rows, Objective... objectives) {
         this.id = id;
         this.name = name;
         this.desc = desc;

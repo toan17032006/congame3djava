@@ -1,6 +1,5 @@
 package vn.samurai;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +13,7 @@ public final class Levels {
 
         levels.add(new Level("L01", "Bờ Rào Sương Mù",
                 "Sương dày. Trước khi chạm cổng làng, vài tên sơn tặc đã len lỏi ra bìa rừng.",
-                80, 40, new Color(120, 135, 150), new Color(70, 78, 66),
+                80, 40, new RgbColor(120, 135, 150), new RgbColor(70, 78, 66),
                 new String[]{
                         "####################",
                         "#P.......T.......g.#",
@@ -36,7 +35,7 @@ public final class Levels {
 
         levels.add(new Level("L02", "Làng Hạc Bạch",
                 "Làng cất rượu cho mùa đông - và sơn tặc cũng chọn đúng mùa ấy.",
-                150, 80, new Color(135, 170, 210), new Color(110, 90, 60),
+                150, 80, new RgbColor(135, 170, 210), new RgbColor(110, 90, 60),
                 new String[]{
                         "####################",
                         "#P.......T.......a.#",
@@ -58,7 +57,7 @@ public final class Levels {
 
         levels.add(new Level("L03", "Rừng Tre Mật",
                 "Tre xanh dày đến mức trời chỉ còn một dải mỏng. Trong rừng, tiếng khóc không thuộc về người sống.",
-                200, 100, new Color(110, 160, 120), new Color(50, 80, 45),
+                200, 100, new RgbColor(110, 160, 120), new RgbColor(50, 80, 45),
                 new String[]{
                         "####################",
                         "#P.......T.......w.#",
@@ -80,7 +79,7 @@ public final class Levels {
 
         levels.add(new Level("L04", "Đền Hoang",
                 "Đền hoang đầu con đèo. Trong sân đá, một bóng to lớn quăng búa tập.",
-                420, 250, new Color(140, 130, 110), new Color(95, 85, 70),
+                420, 250, new RgbColor(140, 130, 110), new RgbColor(95, 85, 70),
                 new String[]{
                         "####################",
                         "#P.......T.......g.#",
@@ -102,7 +101,7 @@ public final class Levels {
 
         levels.add(new Level("L05", "Sân Đấu Ronin",
                 "Sân đấu của những kẻ vô chủ. Hai lượt đấu đơn, rồi Kagemune bước ra khỏi bóng.",
-                620, 400, new Color(150, 140, 120), new Color(105, 85, 55),
+                620, 400, new RgbColor(150, 140, 120), new RgbColor(105, 85, 55),
                 new String[]{
                         "####################",
                         "#P.......T.......r.#",
@@ -124,7 +123,7 @@ public final class Levels {
 
         levels.add(new Level("L06", "Sườn Núi Tu La",
                 "Khói lửa xanh trùm lên sườn núi. Tín đồ Tu La hát trên đường lên đền.",
-                900, 600, new Color(170, 90, 60), new Color(80, 50, 40),
+                900, 600, new RgbColor(170, 90, 60), new RgbColor(80, 50, 40),
                 new String[]{
                         "####################",
                         "#P.......T.......u.#",
@@ -147,7 +146,7 @@ public final class Levels {
 
         levels.add(new Level("L07", "Thành Bóng Tối",
                 "Pho tượng sắt của thành bóng tối trấn giữ con đường cuối cùng.",
-                1300, 850, new Color(70, 75, 95), new Color(55, 50, 65),
+                1300, 850, new RgbColor(70, 75, 95), new RgbColor(55, 50, 65),
                 new String[]{
                         "####################",
                         "#P.......T.......n.#",
@@ -169,7 +168,7 @@ public final class Levels {
 
         levels.add(new Level("L08", "Mạc Phủ Bóng Tối",
                 "Ngươi đã đến nơi rẻ nhất của số phận. Nơi đây Yamikage cai quản cái chết.",
-                2200, 1500, new Color(40, 45, 70), new Color(35, 35, 50),
+                2200, 1500, new RgbColor(40, 45, 70), new RgbColor(35, 35, 50),
                 new String[]{
                         "####################",
                         "#P.......T.......s.#",

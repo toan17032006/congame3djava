@@ -1,53 +1,49 @@
-# Đạo Của Kẻ Vô Danh — Samurai 3D (bản Java)
+# Đạo Của Kẻ Vô Danh — Samurai 3D (bản LibGDX)
 
-Game samurai hành động góc nhìn thứ nhất, viết bằng **Java thuần (JDK chuẩn, Swing/Java2D),
-không dùng Spring, không dùng thư viện ngoài, không dùng ngôn ngữ khác**.
-Đồ họa 3D trong bản Java là **raycasting góc nhìn thứ nhất** (tường, cây, nhân vật và vật phẩm
-được chiếu phối cảnh theo khoảng cách, có bản đồ mini góc phải trên) — không phải mô hình 3D
-Three.js như bản web cũ.
+Game samurai hành động góc nhìn thứ nhất, viết bằng **Java + LibGDX 1.12.1 (backend LWJGL3)**.
+Đồ họa 3D trong bản này là **3D thật**: camera phối cảnh góc nhìn thứ nhất
+(`PerspectiveCamera`), tường, cây, cổng Torii, đài hồi sinh, địch và vật phẩm đều là
+mô hình 3D (hộp, nón, cầu) vẽ bằng `ModelBatch`, có ánh sáng môi trường và ánh sáng
+hướng, có head-bob khi di chuyển và bản đồ mini góc phải trên.
 
-> Lưu ý về phạm vi chuyển đổi: repo này trước đây là game web Three.js + server Python
-> (15 màn, 5 boss, cây kỹ năng, phe phái, cửa hàng…). Bản Java này **thay thế hoàn toàn**
-> bản web/Python đó bằng một game Java mới, giữ lại cốt truyện, tên màn, tên boss, nhiệm vụ
-> và vòng lặp chiến đấu soulslike, nhưng cô đọng thành **8 chương, 5 boss**, với hệ thống
-> kỹ năng/chế tạo/phe phái được đơn giản hóa cho phù hợp với Java thuần. Các file JS/Python
-> cũ đã được xóa khỏi repo.
+> Lịch sử của repo: trước đây repo là game web Three.js + server Python (15 màn, 5 boss,
+> cây kỹ năng, phe phái, cửa hàng…). Sau đó repo được viết lại thành game Java thuần Swing
+> raycasting 2,5D (8 chương, 5 boss). Bản hiện tại **nâng cấp bản Swing đó lên LibGDX 3D thật**,
+> giữ nguyên toàn bộ luật chơi, bản đồ, địch, boss, nhiệm vụ, chế tạo, lên cấp và file lưu
+> của bản Swing, chỉ thay phần hiển thị và input bằng LibGDX. Bản Swing cũ vẫn còn trong
+> lịch sử git ở commit `80555ad`, bản web gốc còn ở commit `ec46715`, nếu bạn muốn xem lại.
 
 ## 1. Yêu cầu
 
 - JDK 17 trở lên (đã kiểm tra với JDK 17.0.21).
-- Không cần Maven, Gradle, Node, Python hay tải thêm thư viện nào.
+- Không cần cài Gradle trước: repo đã có sẵn `gradlew` / `gradlew.bat` (Gradle Wrapper 8.5),
+  lần chạy đầu tiên Wrapper sẽ tự tải Gradle 8.5 và Gradle sẽ tự tải LibGDX 1.12.1
+  (gdx, gdx-backend-lwjgl3, gdx-freetype và LWJGL) từ Maven Central, nên lần đầu cần
+  mạng và có thể mất vài phút. Các lần sau chạy nhanh hơn vì đã có cache.
 - Chạy trên Windows, Linux và macOS. Game lưu tiến trình vào file `samurai_save.txt`
-  trong thư mục đang chạy game (thư mục làm việc khi gõ lệnh `java ...`).
+  trong thư mục đang chạy game.
 
 ## 2. Cách chạy
 
-### Linux / macOS
-
-```bash
-mkdir -p out
-javac -encoding UTF-8 -d out $(find src -name "*.java")
-java -cp out vn.samurai.Main
-```
-
-### Windows (PowerShell)
-
-```powershell
-New-Item -ItemType Directory -Force out
-javac -encoding UTF-8 -d out (Get-ChildItem -Recurse -Filter *.java src).FullName
-java -cp out vn.samurai.Main
-```
-
-### Windows (Command Prompt)
+### Windows (PowerShell hoặc Command Prompt, đứng ở thư mục gốc của repo)
 
 ```bat
-if not exist out mkdir out
-javac -encoding UTF-8 -d out src\main\java\vn\samurai\*.java
-java -cp out vn.samurai.Main
+gradlew.bat run
 ```
 
-Không chạy `java` trực tiếp từ trong thư mục `src/...` vì như vậy sẽ thiếu classpath
-và class chính `vn.samurai.Main` sẽ không tìm thấy các class còn lại.
+### Linux / macOS (đứng ở thư mục gốc của repo)
+
+```bash
+./gradlew run
+```
+
+Class chính là `vn.samurai.gdx.DesktopLauncher`, nhưng bạn không cần gõ `java` thủ công:
+Gradle sẽ biên dịch và chạy đúng class đó. Đừng dùng lại lệnh cũ
+`javac ...` + `java -cp out vn.samurai.Main`, vì class `vn.samurai.Main` (bản Swing)
+đã được thay bằng bản LibGDX và không còn tồn tại nữa.
+
+Nếu Gradle báo lỗi tải dependency, hãy kiểm tra mạng rồi chạy lại lệnh trên
+(Gradle sẽ tiếp tục từ chỗ đã tải, không cần tải lại từ đầu).
 
 Ở menu chính:
 
@@ -98,9 +94,12 @@ và class chính `vn.samurai.Main` sẽ không tìm thấy các class còn lại
 
 ### 5.1. Di chuyển, góc nhìn và bản đồ
 
-- **Góc nhìn thứ nhất raycasting**: tường và cây được vẽ theo khoảng cách, càng xa càng tối
-  (sương mù theo khoảng cách), mặt trước/mặt bên của tường có độ sáng khác nhau để dễ
-  phân biệt hướng.
+- **Góc nhìn thứ nhất 3D thật (LibGDX)**: camera phối cảnh 67 độ đặt ở độ cao 1,6 ô,
+  nhìn theo hướng người chơi. Tường là khối hộp, cây là khối nón, cổng Torii là 2 cột
+  + 2 xà đỏ, đài hồi sinh là khối đá + quả cầu sáng, địch là mô hình người (thân hộp,
+  đầu cầu, kiếm hộp) quay mặt về phía người chơi, đạn là quả cầu bay. Ánh sáng gồm
+  ánh sáng môi trường + ánh sáng hướng, nên mặt sáng/mặt tối của khối 3D khác nhau
+  theo hướng. Khi di chuyển, camera có head-bob nhẹ cho cảm giác bước đi.
 - **Va chạm**: người chơi và địch không đi xuyên tường. Di chuyển thử theo từng trục X rồi Y,
   nên khi đi chéo vào góc tường sẽ trượt dọc tường thay vì bị kẹt.
 - **Bản đồ mini (góc phải trên)**: tường trắng, cây xanh lá, người chơi là chấm vàng,
@@ -126,8 +125,9 @@ và class chính `vn.samurai.Main` sẽ không tìm thấy các class còn lại
   Đòn địch chạm tới trong lúc né sẽ không gây sát thương và hiện “Né thành công”.
 - **Đòn của địch có báo trước (telegraph)**: trước khi chém, địch vào trạng thái giơ vũ khí
   trong 0,5 giây và được viền đỏ. Đó là lúc để né hoặc parry, đừng đứng yên chịu đòn.
-- **Vết chém trên màn hình**: khi đánh trúng, màn hình hiện vòng cung kiếm ở giữa;
-  khi bị thương, màn hình chớp đỏ và có tiếng bíp cảnh báo.
+- **Vết chém trên màn hình**: khi đánh, màn hình hiện vòng cung kiếm ở giữa;
+  khi bị thương, màn hình chớp đỏ. Bản LibGDX không dùng tiếng bíp của AWT nữa,
+  vì game không còn phụ thuộc vào AWT.
 
 ### 5.3. Địch và AI
 
@@ -239,16 +239,26 @@ theo cách riêng ở trên). Bấm **Tab** để xem túi đồ.
 ## 6. Cấu trúc mã nguồn
 
 ```
+build.gradle                    # LibGDX 1.12.1, backend LWJGL3, FreeType; class chính là DesktopLauncher
+settings.gradle
+gradlew / gradlew.bat           # Gradle Wrapper 8.5 (không cần cài Gradle trước)
+gradle/wrapper/                 # gradle-wrapper.jar + gradle-wrapper.properties
 src/main/java/vn/samurai/
-├── Main.java       # Mở cửa sổ game (JFrame), chạy trên luồng giao diện Swing
-├── GamePanel.java  # Vòng lặp game, raycasting, vẽ HUD/minimap, input, AI địch, đạn, boss pha
+├── gdx/
+│   ├── DesktopLauncher.java    # Mở cửa sổ LibGDX/LWJGL3 1024×640, 60 FPS
+│   ├── SamuraiGame.java        # Application LibGDX, chỉ giữ một Screen là SamuraiScreen
+│   └── SamuraiScreen.java      # Vòng lặp game, camera 3D, ModelBatch, HUD/minimap, input,
+│   │                           # AI địch, đạn, boss pha, tiếng Việt (font DejaVu qua FreeType)
 ├── Levels.java     # Dữ liệu 8 chương: bản đồ dạng lưới ký tự, nhiệm vụ, thưởng, màu trời/sàn
 ├── Level.java      # Một chương: đọc bản đồ, tường/cây, tầm nhìn, mục tiêu, boss còn sống
 ├── Enemy.java      # Dữ liệu địch và boss: máu, tấn công, giáp, tốc độ, tầm nhìn, tỉ lệ đỡ/né
 ├── Player.java     # Người chơi: máu, khí lực, cấp/XP, vàng, túi đồ, chế tạo
 ├── Combat.java     # Công thức sát thương: giáp, chí mạng, đỡ, parry (dùng chung cho game và kiểm tra)
 ├── SaveData.java   # Lưu/tải file samurai_save.txt dạng key=value, bỏ qua file hỏng
-└── Sprite.java     # Vật phẩm, cổng Torii và đài hồi sinh trong thế giới game
+├── Sprite.java     # Vật phẩm, cổng Torii và đài hồi sinh trong thế giới game
+└── RgbColor.java   # Màu RGB thuần (không dùng java.awt.Color, để game LibGDX không kéo theo AWT)
+src/main/resources/fonts/
+└── DejaVuSans.ttf  # Font hiển thị tiếng Việt trong HUD/menu (giấy phép tự do DejaVu)
 ```
 
 Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn đi lại), `.` sàn trống,
@@ -259,21 +269,25 @@ Ký tự bản đồ trong `Levels.java`: `#` tường, `T` cây (cũng chặn �
 
 ## 7. Giới hạn đã biết (minh bạch)
 
-- Đồ họa là raycasting 2,5D, nhân vật/vật phẩm vẽ bằng hình khối và đường nét cơ bản,
-  không phải mô hình 3D low-poly như bản web Three.js.
-- Không có âm nhạc nền và hiệu ứng âm thanh đầy đủ; chỉ có tiếng bíp khi bị thương.
+- Đồ họa đã là 3D thật, nhưng mô hình vẫn là hình khối hình học cơ bản (hộp, nón, cầu),
+  chưa phải mô hình nhân vật low-poly chi tiết, chưa có texture, chưa có animation
+  đi/chém của nhân vật như bản web Three.js.
+- Không có âm nhạc nền và hiệu ứng âm thanh đầy đủ.
 - Không có multiplayer, không có server, không có cửa hàng mua bán, không có cây kỹ năng
   15 node và hệ phe phái đầy đủ như bản web. Kỹ năng trong bản Java chỉ có Nhất Đao Trảm (U).
-- Không có nhảy (Space) và đổi góc nhìn thứ nhất/thứ ba như bản web; bản Java chỉ có
+- Không có nhảy (Space) và đổi góc nhìn thứ nhất/thứ ba như bản web; bản LibGDX chỉ có
   góc nhìn thứ nhất và né bằng phím I.
 - Vàng hiện chỉ để tích lũy và hiển thị, chưa dùng để mua đồ.
-- Hiệu năng phụ thuộc vào máy chạy Java/Swing; game dùng Timer 60 khung hình/giây và
-  không cam kết 60 FPS trên mọi máy.
+- Lần chạy đầu tiên cần mạng để Gradle tải LibGDX và Gradle distribution; máy không có
+  mạng sẽ không chạy được lần đầu, nhưng sau khi đã tải xong thì chạy offline được
+  từ cache Gradle.
 
 ## 8. Kiểm tra nhanh sau khi chạy
 
-1. Menu hiện ra, bấm Enter vào chương 1.
-2. Dùng W/A/S/D di chuyển và xoay, Q/E lách sang, nhìn thấy tường, cây và bản đồ mini.
+1. Chạy `gradlew.bat run` (Windows) hoặc `./gradlew run` (Linux/macOS), chờ tải dependency
+   lần đầu, menu hiện ra, bấm Enter vào chương 1.
+2. Dùng W/A/S/D di chuyển và xoay, Q/E lách sang, nhìn thấy tường hộp, cây nón 3D
+   và bản đồ mini, camera hơi nhún khi di chuyển.
 3. Đến gần sơn tặc, bấm J để chém, giữ L để đỡ, bấm I để né.
 4. Nhặt tre/băng gạc bằng cách đi qua vật phẩm, bấm Tab xem túi đồ, bấm C để chế tạo
    khi đủ nguyên liệu.
